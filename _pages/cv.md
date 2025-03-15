@@ -12,8 +12,7 @@ redirect_from:
 ## Education
 
 - **University of Washington**, Seattle, WA  
-  _Masters in Data Science, Paul G. Allen School of Computer Science_  
-  **2023 -- Mar 2025**
+  _Masters in Data Science, Paul G. Allen School of Computer Science_
 
 - **Thapar Institute of Engineering and Technology**, Patiala, India  
   _Bachelors in Computer Engineering_
