@@ -4,9 +4,7 @@ excerpt: "A personalized multi-modal book recommendation tool. <br/><img src='/i
 collection: projects
 ---
 
-# The Bookworm Project: A New type of Book Recommendations
-
-Introducing **The Bookworm Project**, a multi-modal book recommendation tool that personalizes your reading journey. Unlike traditional systems that rely solely on ratings or genres, this tool integrates various search modalities particularly semantic for unique recommendations.
+It is a multi-modal book recommendation tool that personalizes your reading journey. Unlike traditional systems that rely solely on ratings or genres, this tool integrates various search modalities particularly semantic for unique recommendations.
 
 I used datasets like the **Book Crossing Dataset** and **CMU Book Summary**, along with the **Google Books API** for ISBN matching, the system effectively answers questions such as "What are some books where the MC dies?" or "What are some similar Agastha Christie books?"
 
