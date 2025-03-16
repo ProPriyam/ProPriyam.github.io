@@ -1,6 +1,6 @@
 ---
 title: "The Bookworm Project"
-excerpt: "A personalized multi-modal book recommendation tool. <br/><img src='/images/Project_1_image.png'>"
+excerpt: "A personalized multi-modal book recommendation tool. <br/><img src='/images/bookworm/Project_1_image.png'>"
 collection: projects
 ---
 
