@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <!-- Background -->
+  <rect width="800" height="500" fill="#f8f9fa" rx="10" ry="10"/>
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">
+    Scientific Paper Time Series Data Extraction Pipeline
+  </text>
+  
+  <!-- Step 1: Downloading Papers -->
+  <rect x="100" y="80" width="160" height="60" rx="8" ry="8" fill="#4285f4" stroke="#2a56c6" stroke-width="2"/>
+  <text x="180" y="110" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    1. Download Papers
+  </text>
+  <text x="180" y="130" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    downloading_arxiv.py
+  </text>
+  
+  <!-- Step 2: Filtering PDFs -->
+  <rect x="100" y="170" width="160" height="60" rx="8" ry="8" fill="#34a853" stroke="#1e8e3e" stroke-width="2"/>
+  <text x="180" y="200" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    2. Filter PDFs
+  </text>
+  <text x="180" y="220" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    filtering_pdfs.py
+  </text>
+  
+  <!-- Step 3: Extract Images -->
+  <rect x="100" y="260" width="160" height="60" rx="8" ry="8" fill="#fbbc05" stroke="#f29900" stroke-width="2"/>
+  <text x="180" y="290" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    3. Extract Images
+  </text>
+  <text x="180" y="310" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    PDFFigures2
+  </text>
+  
+  <!-- Step 4: Process PDFs -->
+  <rect x="100" y="350" width="160" height="60" rx="8" ry="8" fill="#ea4335" stroke="#c5221f" stroke-width="2"/>
+  <text x="180" y="380" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    4. Process PDFs
+  </text>
+  <text x="180" y="400" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    crop2pdf.py
+  </text>
+  
+  <!-- Step 5: Identify Line Charts -->
+  <rect x="320" y="170" width="160" height="60" rx="8" ry="8" fill="#4285f4" stroke="#2a56c6" stroke-width="2"/>
+  <text x="400" y="200" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    5. Identify Line Charts
+  </text>
+  <text x="400" y="220" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    isLine.py
+  </text>
+  
+  <!-- Step 6: Convert to SVG -->
+  <rect x="320" y="260" width="160" height="60" rx="8" ry="8" fill="#34a853" stroke="#1e8e3e" stroke-width="2"/>
+  <text x="400" y="290" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    6. Convert to SVG
+  </text>
+  <text x="400" y="310" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    pdf2svg.py
+  </text>
+  
+  <!-- Step 7: Extract Time Series -->
+  <rect x="540" y="220" width="160" height="60" rx="8" ry="8" fill="#fbbc05" stroke="#f29900" stroke-width="2"/>
+  <text x="620" y="250" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    7. Extract Time Series
+  </text>
+  <text x="620" y="270" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    svg2time_series.py
+  </text>
+  
+  <!-- Output -->
+  <rect x="540" y="350" width="160" height="60" rx="8" ry="8" fill="#0f9d58" stroke="#0b8043" stroke-width="2"/>
+  <text x="620" y="380" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+    Time Series Data
+  </text>
+  <text x="620" y="400" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="white">
+    Ready for Analysis
+  </text>
+  
+  <!-- Flow Arrows -->
+  <!-- Step 1 to Step 2 -->
+  <path d="M180 140 L180 170" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 2 to Step 3 -->
+  <path d="M180 230 L180 260" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 3 to Step 4 -->
+  <path d="M180 320 L180 350" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 4 to Step 5 -->
+  <path d="M260 380 L290 380 L290 200 L320 200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 5 to Step 6 -->
+  <path d="M400 230 L400 260" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 6 to Step 7 -->
+  <path d="M480 290 L510 290 L510 250 L540 250" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 7 to Output -->
+  <path d="M620 280 L620 350" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Arrowhead marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+  </defs>
+  
+  <!-- Legend -->
+  <rect x="100" y="440" width="600" height="40" rx="5" ry="5" fill="#eee" stroke="#ddd" stroke-width="1"/>
+  <text x="110" y="465" font-family="Arial, sans-serif" font-size="12" fill="#666">
+    This pipeline automates the extraction of time series data from scientific papers, reducing manual effort in data collection and analysis.
+  </text>
+</svg>
