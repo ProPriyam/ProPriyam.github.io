@@ -2,17 +2,16 @@
 title: "CV"
 ---
 
-## Education
+## Experience
 
-- **University of Washington**, Seattle, WA  
-  _Masters in Data Science, Paul G. Allen School of Computer Science_
+### Software Engineer
 
-- **Thapar Institute of Engineering and Technology**, Patiala, India  
-  _Bachelors in Computer Engineering_
+**Microsoft | Azure Storage** - Remote, US  
+_April 2025 - Present_
 
----
-
-## Relevant Experience
+- Developing and enhancing the **Ultra Disk Control Plane**, implementing telemetry instrumentation and feature development across critical system components including **disk handlers and Snapshots**.
+- Driving **rack and tenant testing validation** workflows, ensuring performance of Azure Storage infrastructure at scale.
+- Contributing to **operational maintenance** initiatives, improving system observability and reducing incident response times through comprehensive monitoring solutions.
 
 ### Data Intern
 
@@ -47,3 +46,13 @@ _May 2021 - Nov 2021_
 - **Frameworks:** TensorFlow, PyTorch, Scikit-learn, Flask, Node.js
 - **Developer Tools:** Git, Docker, Kubernetes, AWS, Azure AI Studio, GCP, VS Code, Visual Studio
 - **Libraries:** Keras, Spark, pandas, NumPy, Matplotlib, Seaborn, SciPy
+
+---
+
+## Education
+
+- **University of Washington**, Seattle, WA  
+  _Masters in Data Science, Paul G. Allen School of Computer Science_
+
+- **Thapar Institute of Engineering and Technology**, Patiala, India  
+  _Bachelors in Computer Engineering_

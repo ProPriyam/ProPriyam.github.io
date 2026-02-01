@@ -1,5 +1,5 @@
 ---
-title: "The Genius of the Uber App's Real-Time Map"
+title: "Uber App's Real-Time Map"
 description: "A breakdown of how Uber engineered its real-time map system to handle millions of drivers and riders simultaneously."
 date: 2025-01-15
 ---
@@ -21,6 +21,7 @@ That works... until you scale.
 Polling wastes bandwidth, burns battery, and forces servers to answer questions even when nothing has changed. Uber flipped this model entirely and moved to a **push-based system**.
 
 Now the logic is simple:
+
 - The **server decides** when something meaningful changed
 - The **server pushes** updates only when needed
 - The client just listens
@@ -33,21 +34,25 @@ This alone removes a huge amount of unnecessary load.
 
 At Uber's scale, even "pushing updates" is not a single concern. They broke it into three separate responsibilities:
 
-### 1. When to Push - *Fireball*
+### 1. When to Push - _Fireball_
+
 Fireball is a microservice that listens to events like driver location updates.
 
 It asks:
+
 - Did the driver actually move?
-- Did they move *enough* to matter?
+- Did they move _enough_ to matter?
 
 If a driver shifts a few centimeters, Fireball ignores it. If they've moved meaningfully, Fireball greenlights a push. This is classic **change-based throttling**, and it saves massive compute.
 
 ---
 
-### 2. What to Push - *API Gateway*
+### 2. What to Push - _API Gateway_
+
 Once Fireball decides an update is worth sending, it doesn't assemble the full payload itself.
 
 Instead, it sends **minimal data** to Uber's API Gateway. The gateway's job is to:
+
 - Enrich that minimal signal
 - Fetch all required context
 - Build the full client-ready payload
@@ -56,8 +61,9 @@ This keeps Fireball lightweight and scalable.
 
 ---
 
-### 3. How to Push - *Ramen Servers*
-Finally, the client connects to a specialized push server (internally called a *Ramen server*), which streams the prepared payload to the device.
+### 3. How to Push - _Ramen Servers_
+
+Finally, the client connects to a specialized push server (internally called a _Ramen server_), which streams the prepared payload to the device.
 
 At this point, the update is fast, targeted, and efficient.
 
@@ -67,13 +73,14 @@ At this point, the update is fast, targeted, and efficient.
 
 Pushing updates is only half the battle. Uber constantly needs to answer questions like:
 
-> "Which drivers are near this rider *right now*?"
+> "Which drivers are near this rider _right now_?"
 
 At small scale, you could just calculate distances:
+
 - Rider -> Driver A
 - Rider -> Driver B
 - Rider -> Driver C  
-...repeat millions of times.
+  ...repeat millions of times.
 
 At Uber's scale, this becomes **computationally impossible**.
 
@@ -84,10 +91,12 @@ At Uber's scale, this becomes **computationally impossible**.
 Uber's solution is **spatial partitioning**.
 
 Instead of comparing every driver to every rider:
+
 - Divide the world into small regions
 - Only consider drivers in nearby regions
 
 Now the problem becomes:
+
 > "Which drivers are in the same or neighboring regions?"
 
 This dramatically cuts down the search space.
@@ -109,11 +118,13 @@ Uber wanted something closer to a true radius-based approximation.
 Uber built **H3**, an open-source **hexagonal spatial indexing system**.
 
 Why hexagons?
+
 - All neighbors are roughly equidistant
 - Radius queries are more consistent
 - No corner bias
 
 The world is divided into hexagonal cells at multiple resolutions. Finding nearby drivers becomes a matter of:
+
 - Locating the rider's hex
 - Expanding outward to neighboring hexes
 
@@ -128,13 +139,17 @@ Raw GPS updates are noisy. If Uber just snapped a car from point A to point B ev
 So Uber does two things:
 
 ### Dead Reckoning
-Between updates, the system predicts where the driver *should* be based on:
+
+Between updates, the system predicts where the driver _should_ be based on:
+
 - Last known position
 - Speed
 - Direction
 
 ### Kalman Filters
+
 Predictions are then combined with real GPS measurements using **Kalman filters**, which:
+
 - Smooth out noise
 - Correct predictions over time
 - Avoid sudden jumps
