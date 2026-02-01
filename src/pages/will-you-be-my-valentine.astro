@@ -212,8 +212,8 @@
       </div>
       
       <div class="victory-screen" id="victory-screen" style="display: none;">
-        <h1>Quest Complete!</h1>
-        <p id="valentine-question">Will you be my Valentine?</p>
+        <h1>Will you be my Valentine? Pls.</h1>
+        <p id="valentine-question"></p>
         <div id="valentine-photo"></div>
         <div>
           <button class="btn" id="yes-btn">Yes</button>
@@ -1121,7 +1121,7 @@
         // No photo found, show placeholder heart
         photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">💕</div>';
       };
-      img.src = '/valentine/valentine.png';
+      img.src = '/valentine/valentine.jpeg';
       
       startConfetti();
     }
@@ -1182,10 +1182,31 @@
     }
 
     function showFinalMessage() {
+      // Change the heading
+      document.querySelector('#victory-screen h1').textContent = "It's a date! 💕";
       document.getElementById('valentine-question').innerHTML = 
-        'Thank you for playing! 💕<br><span style="color: #FFD700; font-size: 24px;">Date unlocked: Feb 14 💘</span>';
+        '<span style="color: #FFD700; font-size: 24px;">See you on Feb 14 💘</span>';
       document.getElementById('yes-btn').style.display = 'none';
       document.getElementById('yes-louder-btn').style.display = 'none';
+      
+      // Switch to the date photo
+      const photoContainer = document.getElementById('valentine-photo');
+      photoContainer.innerHTML = '';
+      const img = new Image();
+      img.onload = function() {
+        const pixelated = pixelateImage(img, 6);
+        pixelated.style.maxWidth = '200px';
+        pixelated.style.maxHeight = '200px';
+        pixelated.style.borderRadius = '8px';
+        pixelated.style.border = '4px solid #FF6B9D';
+        pixelated.style.margin = '20px auto';
+        pixelated.style.display = 'block';
+        photoContainer.appendChild(pixelated);
+      };
+      img.onerror = function() {
+        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">💕</div>';
+      };
+      img.src = '/valentine/valentine-date.jpeg';
     }
 
     // ============================================
