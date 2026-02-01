@@ -1,0 +1,26 @@
+{
+  "books": [
+    {
+      "name": "Designing Data-Intensive Applications",
+      "link": "https://www.amazon.com/Designing-Data-Intensive-Applications-Reliable-Maintainable/dp/1449373321",
+      "blogSlug": null
+    },
+    {
+      "name": "The Pragmatic Programmer",
+      "link": "https://www.amazon.com/Pragmatic-Programmer-journey-mastery-Anniversary/dp/0135957052",
+      "blogSlug": null
+    }
+  ],
+  "papers": [
+    {
+      "name": "MapReduce: Simplified Data Processing on Large Clusters",
+      "link": "https://research.google/pubs/pub62/",
+      "blogSlug": null
+    },
+    {
+      "name": "The Google File System",
+      "link": "https://research.google/pubs/pub51/",
+      "blogSlug": null
+    }
+  ]
+}

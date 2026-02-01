@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title="Blog - Priyam" description="Thoughts on tech, systems, and ideas.">
+  <section class="blog-page">
+    <header class="page-header">
+      <h1>Blog</h1>
+      <p class="text-muted">Thoughts on tech, systems, and ideas.</p>
+    </header>
+    
+    {posts.length > 0 ? (
+      <div class="posts-list">
+        {posts.map(post => (
+          <BlogCard 
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            slug={post.slug}
+          />
+        ))}
+      </div>
+    ) : (
+      <p class="text-muted empty-state">No posts yet. Check back soon!</p>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .blog-page {
+    padding: var(--space-md) 0;
+  }
+  
+  .page-header {
+    margin-bottom: var(--space-2xl);
+  }
+  
+  .page-header h1 {
+    margin-bottom: var(--space-sm);
+  }
+  
+  .page-header p {
+    margin: 0;
+  }
+  
+  .empty-state {
+    padding: var(--space-2xl) 0;
+    text-align: center;
+  }
+</style>

@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import BlogCard from '../components/BlogCard.astro';
+
+const recentPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout title="Priyam Gupta" description="Priyam Gupta's personal website - Software Engineer and Quant Trader.">
+  <section class="hero">
+    <h1>Hey, I'm Priyam</h1>
+    <p class="intro">
+      I'm a developer who enjoys building things and learning how systems work under the hood. 
+      I write about tech, ideas, and things I find interesting.
+    </p>
+    <p class="intro">
+      When I'm not coding, you'll find me reading papers, books, or diving into a rabbit hole on the internet.
+    </p>
+  </section>
+  
+  <section class="recent-posts">
+    <h2>Recent Posts</h2>
+    {recentPosts.length > 0 ? (
+      <div class="posts-list">
+        {recentPosts.map(post => (
+          <BlogCard 
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            slug={post.slug}
+          />
+        ))}
+      </div>
+    ) : (
+      <p class="text-muted">No posts yet. Check back soon!</p>
+    )}
+    <a href="/blog" class="view-all">View all posts &rarr;</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding: var(--space-md) 0 var(--space-2xl);
+  }
+  
+  .hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-lg);
+  }
+  
+  .intro {
+    font-size: 1.125rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+    line-height: 1.8;
+  }
+  
+  .intro:last-of-type {
+    margin-bottom: 0;
+  }
+  
+  .recent-posts {
+    padding: var(--space-xl) 0;
+  }
+  
+  .recent-posts h2 {
+    margin-bottom: var(--space-lg);
+  }
+  
+  .posts-list {
+    margin-bottom: var(--space-lg);
+  }
+  
+  .view-all {
+    display: inline-block;
+    font-weight: 500;
+    margin-top: var(--space-md);
+  }
+  
+  @media (max-width: 480px) {
+    .hero h1 {
+      font-size: 1.875rem;
+    }
+    
+    .intro {
+      font-size: 1rem;
+    }
+  }
+</style>

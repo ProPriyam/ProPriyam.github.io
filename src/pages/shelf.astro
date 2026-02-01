@@ -1,0 +1,125 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import shelfData from '../data/shelf.json';
+
+const { books, papers } = shelfData;
+---
+
+<BaseLayout title="Shelf - Priyam" description="Books and papers I've read or found interesting.">
+  <section class="shelf-page">
+    <header class="page-header">
+      <h1>Shelf</h1>
+      <p class="text-muted">Books and papers I've read or found interesting.</p>
+    </header>
+    
+    <div class="shelf-grid">
+      <div class="shelf-column">
+        <h2>Books</h2>
+        <ul class="shelf-list">
+          {books.map(book => (
+            <li class="shelf-item">
+              {book.blogSlug && (
+                <a href={`/blog/${book.blogSlug}`} class="blog-tag">[Blog]</a>
+              )}
+              <a href={book.link} target="_blank" rel="noopener noreferrer" class="item-link">
+                {book.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+        {books.length === 0 && <p class="text-muted">Nothing here yet.</p>}
+      </div>
+      
+      <div class="shelf-column">
+        <h2>Papers</h2>
+        <ul class="shelf-list">
+          {papers.map(paper => (
+            <li class="shelf-item">
+              {paper.blogSlug && (
+                <a href={`/blog/${paper.blogSlug}`} class="blog-tag">[Blog]</a>
+              )}
+              <a href={paper.link} target="_blank" rel="noopener noreferrer" class="item-link">
+                {paper.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+        {papers.length === 0 && <p class="text-muted">Nothing here yet.</p>}
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .shelf-page {
+    padding: var(--space-md) 0;
+  }
+  
+  .page-header {
+    margin-bottom: var(--space-2xl);
+  }
+  
+  .page-header h1 {
+    margin-bottom: var(--space-sm);
+  }
+  
+  .page-header p {
+    margin: 0;
+  }
+  
+  .shelf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3xl);
+  }
+  
+  .shelf-column h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .shelf-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .shelf-item {
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.6;
+    font-size: 1.0625rem;
+  }
+  
+  .shelf-item:last-child {
+    border-bottom: none;
+  }
+  
+  .blog-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    margin-right: var(--space-sm);
+  }
+  
+  .blog-tag:hover {
+    text-decoration: underline;
+  }
+  
+  .item-link {
+    color: var(--color-text);
+  }
+  
+  .item-link:hover {
+    color: var(--color-accent);
+  }
+  
+  @media (max-width: 640px) {
+    .shelf-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+  }
+</style>
