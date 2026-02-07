@@ -358,6 +358,51 @@
     };
 
     // ============================================
+    // RUNNER MODE (Rose Day) - State & Assets
+    // ============================================
+    const gardenBgImg = new Image();
+    gardenBgImg.src = '/valentine/rose-level-bg.png';
+
+    const thornImg = new Image();
+    thornImg.src = '/valentine/thorn.png';
+
+    const Runner = {
+      active: false,
+      lane: 1,           // 0=left, 1=center, 2=right
+      laneX: 400,        // current visual X (smooth lerp)
+      objects: [],        // {type:'rose'|'thorn', lane, z, collected}
+      rosesCollected: 0,
+      startTime: 0,
+      elapsed: 0,
+      speed: 0.006,      // z units per frame (ramps up)
+      stunTimer: 0,       // frames remaining of stun shake
+      finished: false,
+      spawnTimer: 0,
+      archScale: 0,       // grows from 0 to 1 at the end
+      duration: 35,       // seconds to run
+      lanePositions: [280, 400, 520],  // bottom-screen X for each lane
+      vanishX: 400,
+      vanishY: 180,
+      playerY: 440,
+      // Pixel-art player colors for runner mode
+      runFrame: 0
+    };
+
+    // Rose messages shown when collecting roses
+    const roseMessages = [
+      "A red rose for courage",
+      "Each petal holds a wish",
+      "She loves me...",
+      "Love is patient",
+      "Love is kind",
+      "She loves me not... jk, she does",
+      "Almost there...",
+      "One step closer",
+      "Keep running!",
+      "You're doing great!"
+    ];
+
+    // ============================================
     // FUNNY POPUP SYSTEM
     // ============================================
     const funnyPopups = [
@@ -397,7 +442,15 @@
     // LEVEL DEFINITIONS
     // ============================================
     const levels = [
-      // Level 1: The Start of the Quest
+      // Level 1: Rose Day - 3-lane perspective runner
+      {
+        name: "Rose Day",
+        introText: "Every love story begins with a single rose...",
+        endText: "A garden full of roses, but only one worth picking.",
+        isRunner: true
+      },
+
+      // Level 2: The Start of the Quest
       {
         name: "The Start of the Quest",
         introText: "One day, I realized something was missing...",
@@ -425,7 +478,7 @@
         endX: 1500
       },
       
-      // Level 2: Doubts & Distractions
+      // Level 3: Doubts & Distractions
       {
         name: "Doubts & Distractions",
         introText: "The world had distractions... but only one destination.",
@@ -458,7 +511,7 @@
         endX: 1700
       },
       
-      // Level 3: Almost There
+      // Level 4: Almost There
       {
         name: "Almost There",
         introText: "What if she says no?",
@@ -488,7 +541,7 @@
         endX: 1900
       },
       
-      // Level 4: Found You (Final)
+      // Level 5: Found You (Final)
       {
         name: "Found You",
         introText: "Quest complete.",
@@ -513,6 +566,17 @@
       const level = levels[index];
       Game.currentLevel = index;
       
+      document.getElementById('level-indicator').textContent = `Level ${index + 1}: ${level.name}`;
+      
+      // Runner mode (Rose Day)
+      if (level.isRunner) {
+        showStory(level.introText, () => {
+          Game.state = 'playing';
+          initRunner();
+        });
+        return;
+      }
+      
       Game.player.x = 50;
       Game.player.y = level.groundY - 50;
       Game.player.vx = 0;
@@ -524,8 +588,6 @@
       Game.hearts = level.hearts.map(h => ({ ...h, collected: false }));
       Game.obstacles = level.obstacles.map(o => ({ ...o }));
       Game.particles = [];
-      
-      document.getElementById('level-indicator').textContent = `Level ${index + 1}: ${level.name}`;
       
       // Show intro story
       showStory(level.introText, () => {
@@ -678,7 +740,7 @@
           ctx.arc(650 - Game.camera.x * 0.05, 80, 40, 0, Math.PI * 2);
           ctx.fill();
           break;
-          
+
         case 'room':
           // Warm room
           const roomGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
@@ -972,6 +1034,336 @@
     }
 
     // ============================================
+    // RUNNER MODE FUNCTIONS (Rose Day)
+    // ============================================
+    function initRunner() {
+      Runner.active = true;
+      Runner.lane = 1;
+      Runner.laneX = Runner.lanePositions[1];
+      Runner.objects = [];
+      Runner.rosesCollected = 0;
+      Runner.startTime = Date.now();
+      Runner.elapsed = 0;
+      Runner.speed = 0.012;
+      Runner.stunTimer = 0;
+      Runner.finished = false;
+      Runner.spawnTimer = 0;
+      Runner.archScale = 0;
+      Runner.runFrame = 0;
+    }
+
+    function updateRunner() {
+      const now = Date.now();
+      Runner.elapsed = (now - Runner.startTime) / 1000;
+      Runner.runFrame++;
+
+      // Smooth lane transition
+      const targetX = Runner.lanePositions[Runner.lane];
+      Runner.laneX += (targetX - Runner.laneX) * 0.15;
+
+      // Speed ramps up slightly over time
+      Runner.speed = 0.006 + Runner.elapsed * 0.00012;
+
+      // Decrease stun timer
+      if (Runner.stunTimer > 0) Runner.stunTimer--;
+
+      // Check if we've reached the end
+      if (Runner.elapsed >= Runner.duration && !Runner.finished) {
+        Runner.finished = true;
+        // Show the end screen for 5 seconds, then finish
+        setTimeout(() => {
+          finishRunner();
+        }, 5000);
+      }
+
+      // Spawn objects
+      if (!Runner.finished) {
+        Runner.spawnTimer++;
+        // Spawn every ~25 frames (mix of roses and thorns)
+        if (Runner.spawnTimer >= 25) {
+          Runner.spawnTimer = 0;
+          const lane = Math.floor(Math.random() * 3);
+          // 60% roses, 40% thorns
+          const type = Math.random() < 0.6 ? 'rose' : 'thorn';
+          Runner.objects.push({
+            type: type,
+            lane: lane,
+            z: 1.0,
+            collected: false,
+            hit: false
+          });
+          // Sometimes spawn a second object in a different lane
+          if (Math.random() < 0.3) {
+            let lane2 = (lane + 1 + Math.floor(Math.random() * 2)) % 3;
+            const type2 = Math.random() < 0.5 ? 'rose' : 'thorn';
+            Runner.objects.push({
+              type: type2,
+              lane: lane2,
+              z: 1.0,
+              collected: false,
+              hit: false
+            });
+          }
+        }
+      }
+
+      // Move objects toward player (z goes from 1.0 down to 0.0)
+      Runner.objects.forEach(obj => {
+        obj.z -= Runner.speed;
+      });
+
+      // Check collisions for objects near the player (z ~ 0.05 to -0.05)
+      Runner.objects.forEach(obj => {
+        if (obj.z < 0.08 && obj.z > -0.05) {
+          if (obj.lane === Runner.lane) {
+            if (obj.type === 'rose' && !obj.collected) {
+              obj.collected = true;
+              Runner.rosesCollected++;
+              playSound('collect');
+              // Show a rose message
+              const msg = roseMessages[Runner.rosesCollected % roseMessages.length];
+              showGameMessage(msg);
+              // Spawn particles at the object's screen position
+              const sx = Runner.vanishX + (Runner.lanePositions[obj.lane] - Runner.vanishX) * (1 - obj.z);
+              const sy = Runner.vanishY + (Runner.playerY - Runner.vanishY) * (1 - obj.z);
+              spawnParticles(sx, sy, '#E63946', 12);
+              spawnParticles(sx, sy, '#FF6B81', 8);
+            } else if (obj.type === 'thorn' && !obj.hit) {
+              obj.hit = true;
+              Runner.stunTimer = 20; // ~20 frames of screen shake
+              playSound('jump'); // reuse jump sound as a "ouch" indicator
+            }
+          }
+        }
+      });
+
+      // Remove objects that have passed the player
+      Runner.objects = Runner.objects.filter(obj => obj.z > -0.3);
+
+      // Grow arch at the end
+      if (Runner.finished) {
+        Runner.archScale = Math.min(1, Runner.archScale + 0.02);
+      }
+    }
+
+    function drawRunner() {
+      const R = Runner;
+
+      // Screen shake offset
+      let shakeX = 0, shakeY = 0;
+      if (R.stunTimer > 0) {
+        shakeX = (Math.random() - 0.5) * 8;
+        shakeY = (Math.random() - 0.5) * 8;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+
+      // Draw background image (fills the entire canvas)
+      if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
+        ctx.drawImage(gardenBgImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      } else {
+        // Fallback gradient if image not loaded
+        const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        grad.addColorStop(0, '#87CEEB');
+        grad.addColorStop(0.5, '#90EE90');
+        grad.addColorStop(1, '#7BC96F');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+
+      // Draw perspective lane lines (converging to vanish point)
+      ctx.strokeStyle = 'rgba(139, 90, 43, 0.35)';
+      ctx.lineWidth = 2;
+      // Left edge, left-center divider, right-center divider, right edge
+      const laneEdges = [220, 340, 460, 580];
+      laneEdges.forEach(bx => {
+        ctx.beginPath();
+        ctx.moveTo(R.vanishX, R.vanishY);
+        ctx.lineTo(bx, CANVAS_HEIGHT);
+        ctx.stroke();
+      });
+
+      // Draw objects (sorted by z so far objects render first)
+      const sortedObjects = [...R.objects].sort((a, b) => b.z - a.z);
+      sortedObjects.forEach(obj => {
+        if (obj.collected || obj.z > 1.0 || obj.z < -0.1) return;
+
+        const t = 1 - obj.z; // 0 at vanish, 1 at player
+        const laneBottomX = R.lanePositions[obj.lane];
+        const sx = R.vanishX + (laneBottomX - R.vanishX) * t;
+        const sy = R.vanishY + (R.playerY - R.vanishY) * t;
+        const scale = 0.2 + 0.9 * t;
+
+        if (obj.type === 'rose') {
+          // Draw pixel-art rose
+          const roseSize = 26 * scale;
+          // Stem
+          ctx.fillStyle = '#2D6A2D';
+          ctx.fillRect(sx - 1.5 * scale, sy - roseSize * 0.3, 3 * scale, roseSize * 1.2);
+          // Leaf
+          ctx.fillStyle = '#3A8C3A';
+          ctx.beginPath();
+          ctx.ellipse(sx + 4 * scale, sy + roseSize * 0.2, 5 * scale, 2.5 * scale, 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Bloom outer petals
+          ctx.fillStyle = '#C1272D';
+          ctx.beginPath();
+          ctx.arc(sx - 3 * scale, sy - roseSize * 0.4, 5 * scale, 0, Math.PI * 2);
+          ctx.arc(sx + 3 * scale, sy - roseSize * 0.4, 5 * scale, 0, Math.PI * 2);
+          ctx.arc(sx, sy - roseSize * 0.6, 5 * scale, 0, Math.PI * 2);
+          ctx.arc(sx, sy - roseSize * 0.25, 4 * scale, 0, Math.PI * 2);
+          ctx.fill();
+          // Inner bloom
+          ctx.fillStyle = '#E63946';
+          ctx.beginPath();
+          ctx.arc(sx, sy - roseSize * 0.4, 3 * scale, 0, Math.PI * 2);
+          ctx.fill();
+          // Glow
+          ctx.shadowColor = '#FF6B81';
+          ctx.shadowBlur = 6 * scale;
+          ctx.beginPath();
+          ctx.arc(sx, sy - roseSize * 0.4, 2 * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else if (obj.type === 'thorn') {
+          // Draw thorn from image
+          const ts = 50 * scale;
+          if (thornImg.complete && thornImg.naturalWidth > 0) {
+            ctx.drawImage(thornImg, sx - ts / 2, sy - ts, ts, ts);
+          } else {
+            // Fallback: simple red X
+            ctx.strokeStyle = '#FF4444';
+            ctx.lineWidth = 3 * scale;
+            ctx.beginPath();
+            ctx.moveTo(sx - 8 * scale, sy - 20 * scale);
+            ctx.lineTo(sx + 8 * scale, sy);
+            ctx.moveTo(sx + 8 * scale, sy - 20 * scale);
+            ctx.lineTo(sx - 8 * scale, sy);
+            ctx.stroke();
+          }
+        }
+      });
+
+      // Draw player character at the bottom
+      const px = R.laneX;
+      const py = R.playerY;
+      const bobble = Math.sin(R.runFrame * 0.15) * 2;
+
+      // Body
+      ctx.fillStyle = '#4A90D9';
+      ctx.fillRect(px - 12, py - 24 + bobble, 24, 20);
+      // Head
+      ctx.fillStyle = '#FFD5B5';
+      ctx.fillRect(px - 10, py - 38 + bobble, 20, 14);
+      // Eyes
+      ctx.fillStyle = '#333';
+      ctx.fillRect(px - 6, py - 34 + bobble, 4, 4);
+      ctx.fillRect(px + 2, py - 34 + bobble, 4, 4);
+      // Smile
+      ctx.fillRect(px - 4, py - 28 + bobble, 8, 2);
+      // Legs (running animation)
+      ctx.fillStyle = '#333';
+      const legAnim = Math.sin(R.runFrame * 0.2) * 4;
+      ctx.fillRect(px - 8, py - 4 + bobble, 6, 6 + legAnim);
+      ctx.fillRect(px + 2, py - 4 + bobble, 6, 6 - legAnim);
+
+      // Stun flash overlay
+      if (R.stunTimer > 0 && R.stunTimer % 4 < 2) {
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+
+      // HUD: Rose counter (top-left)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(10, 10, 140, 35);
+      ctx.strokeStyle = '#FF6B9D';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, 140, 35);
+      ctx.fillStyle = '#E63946';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.fillText('🌹 ' + R.rosesCollected, 20, 33);
+
+      // HUD: Progress bar (top-right)
+      const progress = Math.min(R.elapsed / R.duration, 1);
+      const barW = 180;
+      const barH = 14;
+      const barX = CANVAS_WIDTH - barW - 20;
+      const barY = 18;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 8);
+      ctx.strokeStyle = '#FF6B9D';
+      ctx.strokeRect(barX - 4, barY - 4, barW + 8, barH + 8);
+      // Bar background
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      // Bar fill
+      const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      barGrad.addColorStop(0, '#FF6B9D');
+      barGrad.addColorStop(1, '#E63946');
+      ctx.fillStyle = barGrad;
+      ctx.fillRect(barX, barY, barW * progress, barH);
+      // Label
+      ctx.fillStyle = '#FFF';
+      ctx.font = '10px "Courier New", monospace';
+      ctx.fillText('Garden Path', barX + barW / 2 - 30, barY + 11);
+
+      // Arch approach animation at the end
+      if (R.finished && R.archScale > 0) {
+        ctx.globalAlpha = R.archScale;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        
+        // Draw a rose arch
+        ctx.fillStyle = '#E63946';
+        ctx.font = 'bold ' + Math.floor(36 * R.archScale) + 'px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('You made it through the garden!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.fillStyle = '#C1272D';
+        ctx.font = Math.floor(20 * R.archScale) + 'px "Courier New", monospace';
+        ctx.fillText('🌹 ' + R.rosesCollected + ' roses collected 🌹', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 1;
+      }
+
+      // Draw drifting petals overlay (always, for atmosphere)
+      const petalColors = ['#FF6B81', '#E63946', '#FF8FA3', '#FF4D6D'];
+      for (let i = 0; i < 15; i++) {
+        const speed = 1.5 + (i % 4) * 0.5;
+        const ppx = CANVAS_WIDTH - ((i * 97 + Date.now() / (10 / speed)) % (CANVAS_WIDTH + 200)) + 100;
+        const ppy = (i * 41 + Math.sin(Date.now() / 600 + i * 1.7) * 30) % (CANVAS_HEIGHT - 50);
+        const rot = Date.now() / 800 + i * 0.7;
+        const size = 3 + (i % 3) * 1.2;
+        ctx.save();
+        ctx.translate(ppx, ppy);
+        ctx.rotate(rot);
+        ctx.globalAlpha = 0.4 + Math.sin(Date.now() / 500 + i) * 0.2;
+        ctx.fillStyle = petalColors[i % petalColors.length];
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size, size * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.restore(); // end shake offset
+    }
+
+    function finishRunner() {
+      Runner.active = false;
+      const level = levels[Game.currentLevel];
+      playSound('levelComplete');
+      
+      if (level.endText) {
+        showStory(level.endText, () => {
+          loadLevel(Game.currentLevel + 1);
+        });
+      } else {
+        loadLevel(Game.currentLevel + 1);
+      }
+    }
+
+    // ============================================
     // PHYSICS & COLLISION
     // ============================================
     function updatePlayer() {
@@ -1222,6 +1614,23 @@
       }
       
       if (Game.state === 'playing') {
+        // Runner mode: left/right switch lanes, no jump needed
+        if (Runner.active) {
+          switch(e.code) {
+            case 'ArrowLeft':
+            case 'KeyA':
+              if (Runner.lane > 0) Runner.lane--;
+              e.preventDefault();
+              break;
+            case 'ArrowRight':
+            case 'KeyD':
+              if (Runner.lane < 2) Runner.lane++;
+              e.preventDefault();
+              break;
+          }
+          return;
+        }
+        
         switch(e.code) {
           case 'ArrowLeft':
           case 'KeyA':
@@ -1293,19 +1702,39 @@
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       
       if (Game.state === 'playing') {
-        updatePlayer();
-        checkCollisions();
+        if (Runner.active) {
+          updateRunner();
+        } else {
+          updatePlayer();
+          checkCollisions();
+        }
         maybeShowPopup();
       }
       
       // Render
       if (Game.state === 'playing' || Game.state === 'story') {
-        drawBackground(Game.currentLevel);
-        drawPlatforms();
-        drawHearts();
-        drawObstacles();
-        drawPlayer();
-        drawParticles();
+        if (Runner.active) {
+          drawRunner();
+        } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isRunner) {
+          // Story screen for runner level - show garden bg
+          if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
+            ctx.drawImage(gardenBgImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          } else {
+            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+            grad.addColorStop(0, '#FFB3C6');
+            grad.addColorStop(0.5, '#FFC8DD');
+            grad.addColorStop(1, '#FFECF1');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          }
+        } else {
+          drawBackground(Game.currentLevel);
+          drawPlatforms();
+          drawHearts();
+          drawObstacles();
+          drawPlayer();
+          drawParticles();
+        }
       } else if (Game.state === 'title') {
         // Animated title background
         const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
