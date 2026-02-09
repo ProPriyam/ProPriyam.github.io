@@ -91,6 +91,12 @@
       pointer-events: auto;
     }
 
+    .victory-screen {
+      max-height: 100%;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
     .title-screen h1 {
       color: #FF6B9D;
       font-size: 36px;
@@ -188,6 +194,57 @@
       font-size: 24px;
       margin: 20px 0;
     }
+
+    #valentine-photo {
+      position: relative;
+      display: inline-block;
+      margin: 15px auto;
+    }
+
+    #valentine-photo canvas {
+      display: block;
+      max-width: 280px;
+      max-height: 280px;
+      border-radius: 8px;
+      border: 4px solid #8B4513;
+      margin: 0 auto;
+    }
+
+    .ghop-text {
+      position: absolute;
+      font-size: 28px;
+      font-weight: 900;
+      font-style: italic;
+      color: #fff;
+      text-shadow: 
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000,
+        0 0 10px rgba(255, 200, 0, 0.8);
+      pointer-events: none;
+      z-index: 10;
+      animation: ghopPop 0.8s ease-out forwards;
+    }
+
+    @keyframes ghopPop {
+      0% { transform: scale(0) rotate(-15deg); opacity: 1; }
+      30% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+      50% { transform: scale(1) rotate(-3deg); opacity: 1; }
+      100% { transform: scale(0.8) rotate(0deg); opacity: 0; }
+    }
+
+    .choco-btn {
+      background: #5C3317 !important;
+      border: 3px solid #D4A060 !important;
+      font-size: 20px !important;
+      padding: 12px 35px !important;
+    }
+
+    .choco-btn:hover {
+      background: #8B4513 !important;
+      box-shadow: 0 0 20px rgba(139, 66, 19, 0.7) !important;
+    }
   </style>
 </head>
 <body>
@@ -216,8 +273,7 @@
         <p id="valentine-question"></p>
         <div id="valentine-photo"></div>
         <div>
-          <button class="btn" id="yes-btn">Yes</button>
-          <button class="btn" id="yes-louder-btn">Yes (but louder)</button>
+          <button class="btn choco-btn" id="eat-choco-btn">Eat Chocolate</button>
         </div>
       </div>
       
@@ -400,12 +456,12 @@
       rosesCollected: 0,
       startTime: 0,
       elapsed: 0,
-      speed: 0.006,      // z units per frame (ramps up)
+      speed: 0.003,      // z units per frame (ramps up)
       stunTimer: 0,       // frames remaining of stun shake
       finished: false,
       spawnTimer: 0,
       archScale: 0,       // grows from 0 to 1 at the end
-      duration: 35,       // seconds to run
+      duration: 20,       // seconds to run
       lanePositions: [280, 400, 520],  // bottom-screen X for each lane
       vanishX: 400,
       vanishY: 180,
@@ -476,28 +532,12 @@
         isRunner: true
       },
 
-      // Level 2: Chocolate Day - Survival on a crumbling chocolate bar
+      // Level 2: Chocolate Day - Survival on a crumbling chocolate bar (FINAL)
       {
         name: "Chocolate Day",
         introText: "Some things in life are bittersweet... but chocolate? Always sweet.\nStand on the chocolate bar. Squares will fall away. Survive to the last one!",
-        endText: "A little sweetness goes a long way.",
-        isChocolate: true
-      },
-
-      // Level 3: Found You (Final)
-      {
-        name: "Found You",
-        introText: "Quest complete.",
         endText: null,
-        width: 800,
-        groundY: 500,
-        bgType: 'room',
-        platforms: [
-          { x: 0, y: 450, w: 800, h: 50 }
-        ],
-        hearts: [],
-        obstacles: [],
-        endX: 700,
+        isChocolate: true,
         isFinal: true
       }
     ];
@@ -917,12 +957,14 @@
         });
         Choco.confettiParts = Choco.confettiParts.filter(c => c.y < CANVAS_HEIGHT + 20);
         
-        // After 4 seconds, advance to next level
+        // After 4 seconds, advance to victory
         if (Choco.winTimer > 240) {
           Choco.active = false;
           const level = levels[Game.currentLevel];
           playSound('levelComplete');
-          if (level.endText) {
+          if (level.isFinal) {
+            showVictory();
+          } else if (level.endText) {
             showStory(level.endText, () => {
               loadLevel(Game.currentLevel + 1);
             });
@@ -1533,8 +1575,8 @@
       const targetX = Runner.lanePositions[Runner.lane];
       Runner.laneX += (targetX - Runner.laneX) * 0.15;
 
-      // Speed ramps up slightly over time
-      Runner.speed = 0.006 + Runner.elapsed * 0.00012;
+      // Speed ramps up slightly over time (much slower)
+      Runner.speed = 0.003 + Runner.elapsed * 0.00005;
 
       // Decrease stun timer
       if (Runner.stunTimer > 0) Runner.stunTimer--;
@@ -1551,8 +1593,8 @@
       // Spawn objects
       if (!Runner.finished) {
         Runner.spawnTimer++;
-        // Spawn every ~25 frames (mix of roses and thorns)
-        if (Runner.spawnTimer >= 25) {
+        // Spawn every ~40 frames (mix of roses and thorns)
+        if (Runner.spawnTimer >= 40) {
           Runner.spawnTimer = 0;
           const lane = Math.floor(Math.random() * 3);
           // 60% roses, 40% thorns
@@ -1958,6 +2000,18 @@
     // VICTORY & CONFETTI
     // ============================================
     let confettiPieces = [];
+    
+    // Chocolate grid state for the victory screen
+    const chocoReveal = {
+      grid: [],       // 4x4 array of {eaten: false}
+      cols: 4,
+      rows: 4,
+      canvas: null,
+      ctx: null,
+      photoImg: null, // stores the loaded photo for redraws
+      imgW: 0,
+      imgH: 0
+    };
 
     function showVictory() {
       Game.state = 'victory';
@@ -1967,27 +2021,134 @@
       document.getElementById('level-indicator').style.display = 'none';
       document.getElementById('hearts-counter').style.display = 'none';
       document.getElementById('victory-screen').style.display = 'block';
+      document.getElementById('eat-choco-btn').style.display = 'inline-block';
       
-      // Try to load and pixelate the photo
       const photoContainer = document.getElementById('valentine-photo');
+      photoContainer.innerHTML = '';
+      
       const img = new Image();
       img.onload = function() {
-        const pixelated = pixelateImage(img, 6);
-        pixelated.style.maxWidth = '200px';
-        pixelated.style.maxHeight = '200px';
-        pixelated.style.borderRadius = '8px';
-        pixelated.style.border = '4px solid #FF6B9D';
-        pixelated.style.margin = '20px auto';
-        pixelated.style.display = 'block';
-        photoContainer.appendChild(pixelated);
+        const displayW = 280;
+        const displayH = 280;
+        
+        chocoReveal.imgW = displayW;
+        chocoReveal.imgH = displayH;
+        
+        // Light-pixelate the photo and store it for redraws
+        chocoReveal.photoImg = pixelateImage(img, 2);
+        
+        // Create a single canvas for photo + chocolate overlay
+        const cvs = document.createElement('canvas');
+        cvs.width = displayW;
+        cvs.height = displayH;
+        photoContainer.appendChild(cvs);
+        
+        chocoReveal.canvas = cvs;
+        chocoReveal.ctx = cvs.getContext('2d');
+        
+        // Initialize grid
+        chocoReveal.grid = [];
+        for (let r = 0; r < chocoReveal.rows; r++) {
+          for (let c = 0; c < chocoReveal.cols; c++) {
+            chocoReveal.grid.push({ row: r, col: c, eaten: false });
+          }
+        }
+        
+        // Draw photo + full chocolate grid on the single canvas
+        drawChocoOverlay();
       };
       img.onerror = function() {
-        // No photo found, show placeholder heart
-        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">💕</div>';
+        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">&#x1F49C;</div>';
       };
       img.src = '/valentine/valentine.jpeg';
       
       startConfetti();
+    }
+    
+    function drawChocoOverlay() {
+      const c = chocoReveal.ctx;
+      const w = chocoReveal.imgW;
+      const h = chocoReveal.imgH;
+      const sqW = w / chocoReveal.cols;
+      const sqH = h / chocoReveal.rows;
+      
+      // Clear and draw the pixelated photo as base layer
+      c.clearRect(0, 0, w, h);
+      if (chocoReveal.photoImg) {
+        c.drawImage(chocoReveal.photoImg, 0, 0, w, h);
+      }
+      
+      // Draw uneaten chocolate squares on top (hiding the photo underneath)
+      chocoReveal.grid.forEach(sq => {
+        if (sq.eaten) return;
+        
+        const x = sq.col * sqW;
+        const y = sq.row * sqH;
+        
+        // Dark chocolate body
+        c.fillStyle = '#3B1F0E';
+        c.fillRect(x, y, sqW, sqH);
+        
+        // Inner raised portion (lighter)
+        const inset = 4;
+        c.fillStyle = '#5C3317';
+        c.fillRect(x + inset, y + inset, sqW - inset * 2, sqH - inset * 2);
+        
+        // Glossy highlight
+        const shineGrad = c.createLinearGradient(x, y, x + sqW * 0.5, y + sqH * 0.5);
+        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        c.fillStyle = shineGrad;
+        c.fillRect(x + inset, y + inset, sqW - inset * 2, sqH - inset * 2);
+        
+        // Groove lines
+        c.strokeStyle = '#2A1508';
+        c.lineWidth = 1.5;
+        c.strokeRect(x + 0.5, y + 0.5, sqW - 1, sqH - 1);
+      });
+    }
+    
+    function eatChocolate() {
+      const uneaten = chocoReveal.grid.filter(sq => !sq.eaten);
+      if (uneaten.length === 0) return;
+      
+      // Pick a random uneaten square
+      const sq = uneaten[Math.floor(Math.random() * uneaten.length)];
+      sq.eaten = true;
+      
+      // Play bite sound
+      playSound('crack');
+      
+      // Redraw overlay (the eaten square will be skipped, revealing photo)
+      drawChocoOverlay();
+      
+      // Show "ghop ghop" comic text
+      const sqW = chocoReveal.imgW / chocoReveal.cols;
+      const sqH = chocoReveal.imgH / chocoReveal.rows;
+      const photoContainer = document.getElementById('valentine-photo');
+      
+      const ghop = document.createElement('span');
+      ghop.className = 'ghop-text';
+      ghop.textContent = 'ghop ghop!';
+      // Position near the eaten square with some randomness
+      ghop.style.left = (sq.col * sqW + sqW / 2 - 50 + (Math.random() - 0.5) * 20) + 'px';
+      ghop.style.top = (sq.row * sqH + sqH / 2 - 15 + (Math.random() - 0.5) * 10) + 'px';
+      photoContainer.appendChild(ghop);
+      
+      // Remove the text after animation
+      setTimeout(() => {
+        if (ghop.parentNode) ghop.parentNode.removeChild(ghop);
+      }, 850);
+      
+      // Check if all eaten
+      const remaining = chocoReveal.grid.filter(sq2 => !sq2.eaten);
+      if (remaining.length === 0) {
+        // All chocolate eaten - show final message after a short delay
+        document.getElementById('eat-choco-btn').style.display = 'none';
+        setTimeout(() => {
+          showFinalMessage();
+        }, 1200);
+      }
     }
 
     function pixelateImage(img, pixelSize) {
@@ -2047,30 +2208,30 @@
 
     function showFinalMessage() {
       // Change the heading
-      document.querySelector('#victory-screen h1').textContent = "It's a date! 💕";
+      document.querySelector('#victory-screen h1').textContent = "It's a date!";
       document.getElementById('valentine-question').innerHTML = 
-        '<span style="color: #FFD700; font-size: 24px;">See you on Feb 14 💘</span>';
-      document.getElementById('yes-btn').style.display = 'none';
-      document.getElementById('yes-louder-btn').style.display = 'none';
+        '<span style="color: #FFD700; font-size: 24px;">See you on Feb 14</span>';
+      document.getElementById('eat-choco-btn').style.display = 'none';
       
-      // Switch to the date photo
+      // Switch to the date photo (light pixelation)
       const photoContainer = document.getElementById('valentine-photo');
       photoContainer.innerHTML = '';
       const img = new Image();
       img.onload = function() {
-        const pixelated = pixelateImage(img, 6);
-        pixelated.style.maxWidth = '200px';
-        pixelated.style.maxHeight = '200px';
-        pixelated.style.borderRadius = '8px';
-        pixelated.style.border = '4px solid #FF6B9D';
-        pixelated.style.margin = '20px auto';
-        pixelated.style.display = 'block';
-        photoContainer.appendChild(pixelated);
+        const pixCanvas = pixelateImage(img, 2);
+        pixCanvas.style.maxWidth = '280px';
+        pixCanvas.style.maxHeight = '280px';
+        pixCanvas.style.borderRadius = '8px';
+        pixCanvas.style.border = '4px solid #FF6B9D';
+        photoContainer.appendChild(pixCanvas);
       };
       img.onerror = function() {
-        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">💕</div>';
+        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">&#x1F495;</div>';
       };
       img.src = '/valentine/valentine-date.jpeg';
+      
+      // Extra confetti
+      startConfetti();
     }
 
     // ============================================
@@ -2154,16 +2315,8 @@
       loadLevel(0);
     });
 
-    document.getElementById('yes-btn').addEventListener('click', () => {
-      playSound('victory');
-      showFinalMessage();
-    });
-
-    document.getElementById('yes-louder-btn').addEventListener('click', () => {
-      playSound('victory');
-      showFinalMessage();
-      // Extra celebration
-      startConfetti();
+    document.getElementById('eat-choco-btn').addEventListener('click', () => {
+      eatChocolate();
     });
 
     // ============================================
