@@ -303,6 +303,29 @@
           osc.start(now);
           osc.stop(now + 0.03);
           break;
+
+        case 'crack':
+          // Chocolate square cracking - short snap
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+          break;
+
+        case 'chocoWin':
+          // Victory chime - ascending notes
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+          break;
       }
     }
 
@@ -365,6 +388,9 @@
 
     const thornImg = new Image();
     thornImg.src = '/valentine/thorn.png';
+
+    const chocoBgImg = new Image();
+    chocoBgImg.src = '/valentine/chocolate-level-bg.png';
 
     const Runner = {
       active: false,
@@ -450,98 +476,15 @@
         isRunner: true
       },
 
-      // Level 2: The Start of the Quest
+      // Level 2: Chocolate Day - Survival on a crumbling chocolate bar
       {
-        name: "The Start of the Quest",
-        introText: "One day, I realized something was missing...",
-        endText: "Okay... I should probably go find her.",
-        width: 1600,
-        groundY: 400,
-        bgType: 'meadow',
-        platforms: [
-          { x: 0, y: 400, w: 1600, h: 100 },
-          { x: 300, y: 320, w: 100, h: 20 },
-          { x: 500, y: 280, w: 120, h: 20 },
-          { x: 750, y: 320, w: 100, h: 20 },
-          { x: 1000, y: 300, w: 150, h: 20 }
-        ],
-        hearts: [
-          { x: 340, y: 280 },
-          { x: 550, y: 240 },
-          { x: 1060, y: 260 }
-        ],
-        obstacles: [
-          { type: 'cloud', x: 400, y: 200, w: 80, h: 40 },
-          { type: 'rock', x: 650, y: 370, w: 40, h: 30 },
-          { type: 'rock', x: 900, y: 370, w: 50, h: 30 }
-        ],
-        endX: 1500
+        name: "Chocolate Day",
+        introText: "Some things in life are bittersweet... but chocolate? Always sweet.\nStand on the chocolate bar. Squares will fall away. Survive to the last one!",
+        endText: "A little sweetness goes a long way.",
+        isChocolate: true
       },
-      
-      // Level 3: Doubts & Distractions
-      {
-        name: "Doubts & Distractions",
-        introText: "The world had distractions... but only one destination.",
-        endText: "Yeah. Definitely worth it.",
-        width: 1800,
-        groundY: 400,
-        bgType: 'city',
-        platforms: [
-          { x: 0, y: 400, w: 1800, h: 100 },
-          { x: 250, y: 330, w: 80, h: 20 },
-          { x: 400, y: 280, w: 100, h: 20 },
-          { x: 600, y: 320, w: 80, h: 20 },
-          { x: 850, y: 280, w: 120, h: 20 },
-          { x: 1100, y: 320, w: 100, h: 20 },
-          { x: 1350, y: 280, w: 100, h: 20 }
-        ],
-        hearts: [
-          { x: 280, y: 290 },
-          { x: 440, y: 240 },
-          { x: 900, y: 240 },
-          { x: 1390, y: 240 }
-        ],
-        obstacles: [
-          { type: 'girl', x: 300, y: 352, w: 32, h: 48, color: '#FF69B4', msg: "Hey there~" },
-          { type: 'npc', x: 550, y: 352, w: 32, h: 48 },
-          { type: 'girl', x: 750, y: 352, w: 32, h: 48, color: '#DDA0DD', msg: "Wanna hang out?" },
-          { type: 'girl', x: 1100, y: 352, w: 32, h: 48, color: '#FFB6C1', msg: "You're cute!" },
-          { type: 'npc', x: 1400, y: 352, w: 32, h: 48 }
-        ],
-        endX: 1700
-      },
-      
-      // Level 4: Almost There
-      {
-        name: "Almost There",
-        introText: "What if she says no?",
-        endText: "Oh. That wasn't so bad.",
-        width: 2000,
-        groundY: 400,
-        bgType: 'night',
-        platforms: [
-          { x: 0, y: 400, w: 400, h: 100 },
-          { x: 450, y: 380, w: 150, h: 30 },
-          { x: 650, y: 340, w: 120, h: 30 },
-          { x: 850, y: 300, w: 150, h: 30 },
-          { x: 1050, y: 340, w: 120, h: 30 },
-          { x: 1250, y: 380, w: 150, h: 30 },
-          { x: 1450, y: 400, w: 550, h: 100 }
-        ],
-        hearts: [
-          { x: 510, y: 340 },
-          { x: 700, y: 300 },
-          { x: 910, y: 260 },
-          { x: 1100, y: 300 },
-          { x: 1310, y: 340 }
-        ],
-        obstacles: [
-          { type: 'monster', x: 1600, y: 320, w: 64, h: 80, defeated: false }
-        ],
-        endX: 1900
-      },
-      
-      // Level 5: Found You (Final)
+
+      // Level 3: Found You (Final)
       {
         name: "Found You",
         introText: "Quest complete.",
@@ -577,6 +520,15 @@
         return;
       }
       
+      // Chocolate survival mode (Chocolate Day)
+      if (level.isChocolate) {
+        showStory(level.introText, () => {
+          Game.state = 'playing';
+          initChocolate();
+        });
+        return;
+      }
+      
       Game.player.x = 50;
       Game.player.y = level.groundY - 50;
       Game.player.vx = 0;
@@ -584,7 +536,7 @@
       Game.player.grounded = false;
       
       Game.camera.x = 0;
-      Game.platforms = [...level.platforms];
+      Game.platforms = level.platforms.map(p => ({ ...p }));
       Game.hearts = level.hearts.map(h => ({ ...h, collected: false }));
       Game.obstacles = level.obstacles.map(o => ({ ...o }));
       Game.particles = [];
@@ -842,6 +794,526 @@
             break;
         }
       });
+    }
+
+    // ============================================
+    // CHOCOLATE DAY - SURVIVAL MINI-GAME
+    // ============================================
+
+    const Choco = {
+      active: false,
+      grid: [],           // 8x2 array of square objects
+      cols: 8,
+      rows: 2,
+      squareW: 70,
+      squareH: 70,
+      gridX: 0,           // computed in init (centered)
+      gridY: 0,           // computed in init
+      nextCol: 0,          // index into dropOrder array
+      dropTimer: 0,        // frames until next column starts dropping
+      dropInterval: 200,   // frames between column drops (~3.3s)
+      dropOrder: [],       // shuffled array of column indices to drop
+      safeCol: 0,          // the one column that never drops (random)
+      won: false,
+      winTimer: 0,
+      lost: false,
+      lostTimer: 0,
+      started: false,      // drops haven't begun yet
+      startDelay: 120,     // 2 second grace period
+      startTimer: 0,
+      particles: [],
+      bigChocoScale: 0,
+      confettiParts: []
+    };
+
+    function initChocolate() {
+      Choco.active = true;
+      Choco.won = false;
+      Choco.lost = false;
+      Choco.winTimer = 0;
+      Choco.lostTimer = 0;
+      Choco.nextCol = 0;
+      Choco.dropTimer = 0;
+      Choco.started = false;
+      Choco.startTimer = 0;
+      Choco.particles = [];
+      Choco.bigChocoScale = 0;
+      Choco.confettiParts = [];
+      
+      // Pick a random safe column (the one that never drops)
+      Choco.safeCol = Math.floor(Math.random() * Choco.cols);
+      
+      // Build shuffled drop order of all columns EXCEPT the safe one
+      Choco.dropOrder = [];
+      for (let i = 0; i < Choco.cols; i++) {
+        if (i !== Choco.safeCol) Choco.dropOrder.push(i);
+      }
+      // Fisher-Yates shuffle
+      for (let i = Choco.dropOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [Choco.dropOrder[i], Choco.dropOrder[j]] = [Choco.dropOrder[j], Choco.dropOrder[i]];
+      }
+      
+      // Center the grid on canvas
+      const totalW = Choco.cols * Choco.squareW;
+      const totalH = Choco.rows * Choco.squareH;
+      Choco.gridX = (CANVAS_WIDTH - totalW) / 2;
+      Choco.gridY = CANVAS_HEIGHT - totalH - 60; // 60px above bottom
+      
+      // Build grid
+      Choco.grid = [];
+      for (let row = 0; row < Choco.rows; row++) {
+        for (let col = 0; col < Choco.cols; col++) {
+          Choco.grid.push({
+            row, col,
+            x: Choco.gridX + col * Choco.squareW,
+            y: Choco.gridY + row * Choco.squareH,
+            w: Choco.squareW,
+            h: Choco.squareH,
+            state: 'stable',    // stable, shaking, falling, gone
+            timer: 0,
+            fallVy: 0,
+            fallOffset: 0,
+            shakeOffset: 0,
+            cracks: [],
+            rotation: 0
+          });
+        }
+      }
+      
+      // Player starts on top center of the bar
+      Game.player.x = CANVAS_WIDTH / 2 - Game.player.width / 2;
+      Game.player.y = Choco.gridY - Game.player.height - 2;
+      Game.player.vx = 0;
+      Game.player.vy = 0;
+      Game.player.grounded = true;
+      Game.camera.x = 0;
+    }
+
+    function updateChocolate() {
+      if (!Choco.active) return;
+      
+      // If already won, skip gameplay and only run win animation
+      if (Choco.won) {
+        Choco.winTimer++;
+        Choco.bigChocoScale = Math.min(Choco.bigChocoScale + 0.02, 1);
+        // Spawn confetti
+        if (Choco.winTimer % 3 === 0 && Choco.confettiParts.length < 80) {
+          Choco.confettiParts.push({
+            x: Math.random() * CANVAS_WIDTH,
+            y: -10,
+            vx: (Math.random() - 0.5) * 3,
+            vy: Math.random() * 2 + 1,
+            size: 4 + Math.random() * 4,
+            color: ['#FF6B9D', '#FFD700', '#FF69B4', '#87CEEB', '#98FB98', '#DDA0DD'][Math.floor(Math.random() * 6)],
+            rot: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.2
+          });
+        }
+        Choco.confettiParts.forEach(c => {
+          c.x += c.vx;
+          c.y += c.vy;
+          c.rot += c.rotSpeed;
+        });
+        Choco.confettiParts = Choco.confettiParts.filter(c => c.y < CANVAS_HEIGHT + 20);
+        
+        // After 4 seconds, advance to next level
+        if (Choco.winTimer > 240) {
+          Choco.active = false;
+          const level = levels[Game.currentLevel];
+          playSound('levelComplete');
+          if (level.endText) {
+            showStory(level.endText, () => {
+              loadLevel(Game.currentLevel + 1);
+            });
+          } else {
+            loadLevel(Game.currentLevel + 1);
+          }
+        }
+        return;
+      }
+      
+      const p = Game.player;
+      
+      // Grace period before drops start
+      if (!Choco.started) {
+        Choco.startTimer++;
+        if (Choco.startTimer >= Choco.startDelay) {
+          Choco.started = true;
+        }
+      }
+      
+      // Player movement (left/right)
+      if (Game.keys.left) p.vx = -MOVE_SPEED;
+      else if (Game.keys.right) p.vx = MOVE_SPEED;
+      else p.vx *= 0.7;
+      
+      // Jump
+      if (Game.keys.jump && p.grounded) {
+        p.vy = JUMP_STRENGTH;
+        p.grounded = false;
+        playSound('jump');
+        Game.keys.jump = false;
+      }
+      
+      // Gravity
+      p.vy += GRAVITY;
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      // Collision with chocolate squares
+      p.grounded = false;
+      Choco.grid.forEach(sq => {
+        if (sq.state === 'falling' || sq.state === 'gone') return;
+        const sqY = sq.y + (sq.state === 'shaking' ? (Math.random() - 0.5) * 2 : 0);
+        if (p.x + p.width > sq.x + 4 && p.x < sq.x + sq.w - 4 &&
+            p.y + p.height > sqY && p.y + p.height < sqY + sq.h + 15 &&
+            p.vy >= 0) {
+          p.y = sqY - p.height;
+          p.vy = 0;
+          p.grounded = true;
+        }
+      });
+      
+      // Keep player in bounds horizontally
+      if (p.x < 0) p.x = 0;
+      if (p.x + p.width > CANVAS_WIDTH) p.x = CANVAS_WIDTH - p.width;
+      
+      // Drop columns in random order (skipping the safe column)
+      if (Choco.started && Choco.nextCol < Choco.dropOrder.length) {
+        Choco.dropTimer++;
+        if (Choco.dropTimer >= Choco.dropInterval) {
+          Choco.dropTimer = 0;
+          const colToDrop = Choco.dropOrder[Choco.nextCol];
+          // Start shaking all squares in this column
+          Choco.grid.forEach(sq => {
+            if (sq.col === colToDrop && sq.state === 'stable') {
+              sq.state = 'shaking';
+              sq.timer = 0;
+              // Generate crack positions
+              sq.cracks = [];
+              for (let ci = 0; ci < 3; ci++) {
+                sq.cracks.push({
+                  x1: Math.random() * sq.w * 0.3,
+                  y1: Math.random() * sq.h,
+                  x2: sq.w * 0.3 + Math.random() * sq.w * 0.4,
+                  y2: Math.random() * sq.h,
+                  x3: sq.w * 0.7 + Math.random() * sq.w * 0.3,
+                  y3: Math.random() * sq.h
+                });
+              }
+            }
+          });
+          Choco.nextCol++;
+        }
+      }
+      
+      // Update square states
+      Choco.grid.forEach(sq => {
+        if (sq.state === 'shaking') {
+          sq.timer++;
+          sq.shakeOffset = (Math.random() - 0.5) * 4;
+          if (sq.timer >= 60) { // 1 second of shaking
+            sq.state = 'falling';
+            sq.timer = 0;
+            sq.fallVy = 0;
+            sq.fallOffset = 0;
+            sq.rotation = 0;
+            playSound('crack');
+            // Spawn crumb particles
+            for (let pi = 0; pi < 6; pi++) {
+              Choco.particles.push({
+                x: sq.x + Math.random() * sq.w,
+                y: sq.y + sq.h,
+                vx: (Math.random() - 0.5) * 3,
+                vy: -Math.random() * 2 - 1,
+                life: 40 + Math.random() * 20,
+                maxLife: 60,
+                size: 2 + Math.random() * 3,
+                color: Math.random() > 0.5 ? '#5C3317' : '#8B6240'
+              });
+            }
+          }
+        }
+        if (sq.state === 'falling') {
+          sq.fallVy += 0.4;
+          sq.fallOffset += sq.fallVy;
+          sq.rotation += 0.02;
+          if (sq.fallOffset > CANVAS_HEIGHT) {
+            sq.state = 'gone';
+          }
+        }
+      });
+      
+      // Update particles
+      Choco.particles.forEach(pt => {
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.vy += 0.15;
+        pt.life--;
+      });
+      Choco.particles = Choco.particles.filter(pt => pt.life > 0);
+      
+      // Check win: all droppable columns have fully fallen away, and player is still alive on the safe column
+      const allDroppedGone = Choco.nextCol >= Choco.dropOrder.length && 
+        Choco.grid.filter(sq => sq.col !== Choco.safeCol).every(sq => sq.state === 'gone');
+      const safeColSquares = Choco.grid.filter(sq => sq.col === Choco.safeCol && sq.state === 'stable');
+      
+      if (allDroppedGone && safeColSquares.length > 0 && p.grounded && p.y < CANVAS_HEIGHT) {
+        Choco.won = true;
+        Choco.winTimer = 0;
+        playSound('chocoWin');
+      }
+      
+      // Check loss: player falls off screen
+      if (p.y > CANVAS_HEIGHT + 50) {
+        Choco.lost = true;
+        Choco.lostTimer++;
+        if (Choco.lostTimer > 90) {
+          // Restart the chocolate level
+          Choco.active = false;
+          loadLevel(Game.currentLevel);
+        }
+      }
+    }
+
+    function drawChocolate() {
+      // Background - chocolate level image
+      if (chocoBgImg.complete && chocoBgImg.naturalWidth > 0) {
+        ctx.drawImage(chocoBgImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      } else {
+        // Fallback gradient while image loads
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        bgGrad.addColorStop(0, '#4A2C2A');
+        bgGrad.addColorStop(0.5, '#6B3A2E');
+        bgGrad.addColorStop(1, '#D2A679');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+      
+      // Floating cocoa particles in background
+      ctx.fillStyle = 'rgba(90, 50, 20, 0.25)';
+      for (let ci = 0; ci < 20; ci++) {
+        const cpx = (ci * 67 + Date.now() / 40) % (CANVAS_WIDTH + 100) - 50;
+        const cpy = (ci * 43 + Math.sin(Date.now() / 700 + ci) * 25) % CANVAS_HEIGHT;
+        ctx.fillRect(cpx, cpy, 3, 3);
+      }
+      
+      // Draw chocolate bar wrapper/tray underneath
+      const trayX = Choco.gridX - 10;
+      const trayY = Choco.gridY - 5;
+      const trayW = Choco.cols * Choco.squareW + 20;
+      const trayH = Choco.rows * Choco.squareH + 15;
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(trayX, trayY, trayW, trayH);
+      ctx.strokeStyle = '#D4A060';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(trayX, trayY, trayW, trayH);
+      
+      // Draw each chocolate square
+      Choco.grid.forEach(sq => {
+        if (sq.state === 'gone') return;
+        
+        let drawX = sq.x;
+        let drawY = sq.y;
+        let alpha = 1;
+        
+        if (sq.state === 'shaking') {
+          drawX += sq.shakeOffset;
+          drawY += (Math.random() - 0.5) * 2;
+        }
+        if (sq.state === 'falling') {
+          drawY += sq.fallOffset;
+          alpha = Math.max(0, 1 - sq.fallOffset / 300);
+        }
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        
+        if (sq.state === 'falling') {
+          const cx = drawX + sq.w / 2;
+          const cy = drawY + sq.h / 2;
+          ctx.translate(cx, cy);
+          ctx.rotate(sq.rotation);
+          ctx.translate(-cx, -cy);
+        }
+        
+        // Square body - dark chocolate
+        ctx.fillStyle = '#3B1F0E';
+        ctx.fillRect(drawX + 1, drawY + 1, sq.w - 2, sq.h - 2);
+        
+        // Inner raised portion (lighter)
+        const inset = 6;
+        ctx.fillStyle = '#5C3317';
+        ctx.fillRect(drawX + inset, drawY + inset, sq.w - inset * 2, sq.h - inset * 2);
+        
+        // Glossy top-left highlight
+        const shineGrad = ctx.createLinearGradient(drawX, drawY, drawX + sq.w * 0.5, drawY + sq.h * 0.5);
+        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = shineGrad;
+        ctx.fillRect(drawX + inset, drawY + inset, sq.w - inset * 2, sq.h - inset * 2);
+        
+        // Grid groove lines (between squares)
+        ctx.strokeStyle = '#2A1508';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(drawX + 1, drawY + 1, sq.w - 2, sq.h - 2);
+        
+        // Crack lines during shaking
+        if (sq.state === 'shaking' && sq.cracks.length > 0) {
+          const crackProgress = Math.min(sq.timer / 60, 1);
+          ctx.strokeStyle = '#1A0A04';
+          ctx.lineWidth = 1.5;
+          sq.cracks.forEach(crack => {
+            ctx.beginPath();
+            ctx.moveTo(drawX + crack.x1, drawY + crack.y1);
+            ctx.lineTo(drawX + crack.x1 + (crack.x2 - crack.x1) * crackProgress, 
+                       drawY + crack.y1 + (crack.y2 - crack.y1) * crackProgress);
+            if (crackProgress > 0.5) {
+              ctx.lineTo(drawX + crack.x2 + (crack.x3 - crack.x2) * (crackProgress - 0.5) * 2,
+                         drawY + crack.y2 + (crack.y3 - crack.y2) * (crackProgress - 0.5) * 2);
+            }
+            ctx.stroke();
+          });
+        }
+        
+        ctx.restore();
+      });
+      
+      // Draw crumb particles
+      Choco.particles.forEach(pt => {
+        const ptAlpha = pt.life / pt.maxLife;
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = ptAlpha;
+        ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+      });
+      ctx.globalAlpha = 1;
+      
+      // Draw player (reuse the existing pixel art player)
+      if (!Choco.won || Choco.winTimer < 120) {
+        drawPlayer();
+      }
+      
+      // Countdown text before drops start
+      if (!Choco.started && Choco.startTimer < Choco.startDelay) {
+        const countdown = Math.ceil((Choco.startDelay - Choco.startTimer) / 60);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 48px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(countdown > 0 ? String(countdown) : 'GO!', CANVAS_WIDTH / 2, 100);
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#FFF5E6';
+        ctx.fillText('Get ready! The chocolate is about to crumble!', CANVAS_WIDTH / 2, 140);
+        ctx.textAlign = 'left';
+      }
+      
+      // "Survive!" indicator during gameplay
+      if (Choco.started && !Choco.won && !Choco.lost) {
+        const remaining = Choco.grid.filter(sq => sq.state === 'stable' || sq.state === 'shaking').length;
+        ctx.fillStyle = '#FFF5E6';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Squares remaining: ${remaining} / ${Choco.cols * Choco.rows}`, CANVAS_WIDTH / 2, 30);
+        ctx.textAlign = 'left';
+      }
+      
+      // Loss message
+      if (Choco.lost) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('You fell!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.fillStyle = '#FFF';
+        ctx.font = '18px monospace';
+        ctx.fillText('Trying again...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+        ctx.textAlign = 'left';
+      }
+      
+      // Win sequence
+      if (Choco.won) {
+        // Confetti
+        Choco.confettiParts.forEach(c => {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle = c.color;
+          ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.6);
+          ctx.restore();
+        });
+        
+        // Big chocolate bar scaling up from center
+        const scale = Choco.bigChocoScale;
+        if (scale > 0) {
+          ctx.save();
+          ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+          ctx.scale(scale, scale);
+          
+          // Big chocolate bar
+          const bw = 180, bh = 100;
+          // Wrapper
+          ctx.fillStyle = '#DAA520';
+          ctx.fillRect(-bw / 2 - 10, -bh / 2 - 10, bw + 20, bh + 20);
+          ctx.strokeStyle = '#B8860B';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(-bw / 2 - 10, -bh / 2 - 10, bw + 20, bh + 20);
+          // Chocolate
+          ctx.fillStyle = '#3B1F0E';
+          ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+          // Grid on the chocolate
+          ctx.strokeStyle = '#2A1508';
+          ctx.lineWidth = 1;
+          for (let gi = 1; gi < 4; gi++) {
+            ctx.beginPath();
+            ctx.moveTo(-bw / 2 + gi * (bw / 4), -bh / 2);
+            ctx.lineTo(-bw / 2 + gi * (bw / 4), bh / 2);
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.moveTo(-bw / 2, 0);
+          ctx.lineTo(bw / 2, 0);
+          ctx.stroke();
+          // Shine
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx.fillRect(-bw / 2, -bh / 2, bw, bh / 3);
+          
+          ctx.restore();
+          
+          // Congratulations text
+          if (Choco.winTimer > 30) {
+            const textAlpha = Math.min((Choco.winTimer - 30) / 30, 1);
+            ctx.globalAlpha = textAlpha;
+            
+            // Glow
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 32px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Congratulations!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = '#FFF';
+            ctx.font = '18px monospace';
+            ctx.fillText('You survived the Chocolate Day!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 90);
+            ctx.textAlign = 'left';
+            ctx.globalAlpha = 1;
+          }
+          
+          // "To be continued..." text
+          if (Choco.winTimer > 120) {
+            const contAlpha = Math.min((Choco.winTimer - 120) / 40, 1);
+            ctx.globalAlpha = contAlpha;
+            ctx.fillStyle = '#FFB6C1';
+            ctx.font = 'italic 22px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('To be continued...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 125);
+            ctx.textAlign = 'left';
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
     }
 
     function drawHearts() {
@@ -1704,6 +2176,8 @@
       if (Game.state === 'playing') {
         if (Runner.active) {
           updateRunner();
+        } else if (Choco.active) {
+          updateChocolate();
         } else {
           updatePlayer();
           checkCollisions();
@@ -1715,6 +2189,8 @@
       if (Game.state === 'playing' || Game.state === 'story') {
         if (Runner.active) {
           drawRunner();
+        } else if (Choco.active) {
+          drawChocolate();
         } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isRunner) {
           // Story screen for runner level - show garden bg
           if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
@@ -1727,6 +2203,14 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
           }
+        } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isChocolate) {
+          // Story screen for chocolate level - show chocolate bg
+          const chocoGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+          chocoGrad.addColorStop(0, '#4A2C2A');
+          chocoGrad.addColorStop(0.5, '#6B3A2E');
+          chocoGrad.addColorStop(1, '#D2A679');
+          ctx.fillStyle = chocoGrad;
+          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         } else {
           drawBackground(Game.currentLevel);
           drawPlatforms();
