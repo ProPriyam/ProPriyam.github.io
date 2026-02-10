@@ -245,6 +245,55 @@
       background: #8B4513 !important;
       box-shadow: 0 0 20px rgba(139, 66, 19, 0.7) !important;
     }
+
+    .teddy-btn {
+      background: #FF69B4 !important;
+      border: 3px solid #FFB6C1 !important;
+      font-size: 20px !important;
+      padding: 12px 35px !important;
+      margin-top: 15px !important;
+      animation: teddyBtnPulse 2s ease-in-out infinite;
+    }
+
+    .teddy-btn:hover {
+      background: #FF1493 !important;
+      box-shadow: 0 0 20px rgba(255, 105, 180, 0.7) !important;
+    }
+
+    @keyframes teddyBtnPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .teddy-victory-screen {
+      text-align: center;
+      pointer-events: auto;
+      max-height: 100%;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .teddy-victory-screen h1 {
+      color: #FF69B4;
+      font-size: 28px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+    }
+
+    #teddy-victory-photo {
+      position: relative;
+      display: inline-block;
+      margin: 15px auto;
+    }
+
+    #teddy-victory-photo canvas {
+      display: block;
+      max-width: 280px;
+      max-height: 280px;
+      border-radius: 8px;
+      border: 4px solid #FF69B4;
+      margin: 0 auto;
+    }
   </style>
 </head>
 <body>
@@ -274,6 +323,15 @@
         <div id="valentine-photo"></div>
         <div>
           <button class="btn choco-btn" id="eat-choco-btn">Eat Chocolate</button>
+          <button class="btn teddy-btn" id="continue-to-teddy-btn" style="display: none;">Continue...</button>
+        </div>
+      </div>
+      
+      <div class="teddy-victory-screen" id="teddy-victory-screen" style="display: none;">
+        <h1>Now you can hug your real teddy</h1>
+        <div id="teddy-victory-photo"></div>
+        <div>
+          <button class="btn teddy-btn" id="teddy-continue-btn" style="display: none;">Continue...</button>
         </div>
       </div>
       
@@ -382,6 +440,40 @@
           osc.start(now);
           osc.stop(now + 0.5);
           break;
+
+        case 'teddyHit':
+          // Boing/boop sound when stomping teddy
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+          break;
+
+        case 'teddyThrow':
+          // Whoosh sound for projectile
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+          break;
+
+        case 'playerHurt':
+          // Ow/buzz when player takes damage
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+          break;
       }
     }
 
@@ -447,6 +539,9 @@
 
     const chocoBgImg = new Image();
     chocoBgImg.src = '/valentine/chocolate-level-bg.png';
+
+    const teddyBgImg = new Image();
+    teddyBgImg.src = '/valentine/teddy-level-bg.png';
 
     const Runner = {
       active: false,
@@ -532,12 +627,21 @@
         isRunner: true
       },
 
-      // Level 2: Chocolate Day - Survival on a crumbling chocolate bar (FINAL)
+      // Level 2: Chocolate Day - Survival on a crumbling chocolate bar
       {
         name: "Chocolate Day",
         introText: "Some things in life are bittersweet... but chocolate? Always sweet.\nStand on the chocolate bar. Squares will fall away. Survive to the last one!",
         endText: null,
         isChocolate: true,
+        isFinal: true  // triggers chocolate-eat victory reveal; continues to teddy after
+      },
+
+      // Level 3: Teddy Day - Boss fight with a giant teddy bear (TRUE FINAL)
+      {
+        name: "Teddy Day",
+        introText: "A wild teddy appears!\nIt won't let you hug it without a fight.\nJump on its head to show it who's boss!",
+        endText: null,
+        isTeddy: true,
         isFinal: true
       }
     ];
@@ -565,6 +669,15 @@
         showStory(level.introText, () => {
           Game.state = 'playing';
           initChocolate();
+        });
+        return;
+      }
+      
+      // Teddy boss fight mode (Teddy Day)
+      if (level.isTeddy) {
+        showStory(level.introText, () => {
+          Game.state = 'playing';
+          initTeddy();
         });
         return;
       }
@@ -851,7 +964,7 @@
       gridY: 0,           // computed in init
       nextCol: 0,          // index into dropOrder array
       dropTimer: 0,        // frames until next column starts dropping
-      dropInterval: 200,   // frames between column drops (~3.3s)
+      dropInterval: 360,   // frames between column drops (~6s)
       dropOrder: [],       // shuffled array of column indices to drop
       safeCol: 0,          // the one column that never drops (random)
       won: false,
@@ -859,11 +972,61 @@
       lost: false,
       lostTimer: 0,
       started: false,      // drops haven't begun yet
-      startDelay: 120,     // 2 second grace period
+      startDelay: 180,     // 3 second grace period
       startTimer: 0,
       particles: [],
       bigChocoScale: 0,
       confettiParts: []
+    };
+
+    // ============================================
+    // TEDDY MODE (Teddy Day) - Boss Fight State
+    // ============================================
+    const Teddy = {
+      active: false,
+      health: 5,
+      maxHealth: 5,
+      x: 580,
+      y: 300,
+      w: 100,
+      h: 120,
+      baseY: 300,
+      facing: -1,
+      phase: 'idle',       // idle, charging, throwing, stunned, defeated
+      phaseTimer: 0,
+      attackTimer: 0,
+      attackInterval: 160,  // frames between attacks (ramps down)
+      stunDuration: 90,     // frames of stun after being hit
+      projectiles: [],      // hearts thrown at player
+      hitFlash: 0,          // frames of white flash when hit
+      defeatTimer: 0,
+      bounceOffset: 0,      // visual bounce animation
+      bounceSpeed: 0.05,
+      angerLevel: 0,        // increases as health drops
+      shakeAmount: 0,
+      particles: [],
+      // Ground / arena
+      groundY: 420,
+      // Win animation
+      won: false,
+      winTimer: 0,
+      confettiParts: [],
+      // Player HP (teddy mode only)
+      playerHealth: 13,
+      playerMaxHealth: 13,
+      playerHitFlash: 0,
+      playerInvincible: 0,  // i-frames after taking damage
+      // Teddy movement AI
+      vx: 0,
+      vy: 0,
+      moveDir: -1,        // -1 = left, 1 = right
+      moveTimer: 0,
+      jumpTimer: 0,
+      jumpCooldown: 0,
+      teddyGrounded: true,
+      // Game over
+      playerDead: false,
+      deathTimer: 0
     };
 
     function initChocolate() {
@@ -1055,7 +1218,7 @@
         if (sq.state === 'shaking') {
           sq.timer++;
           sq.shakeOffset = (Math.random() - 0.5) * 4;
-          if (sq.timer >= 60) { // 1 second of shaking
+          if (sq.timer >= 90) { // 1.5 seconds of shaking
             sq.state = 'falling';
             sq.timer = 0;
             sq.fallVy = 0;
@@ -1878,6 +2041,858 @@
     }
 
     // ============================================
+    // TEDDY MODE (Teddy Day) - Boss Fight
+    // ============================================
+    function initTeddy() {
+      Teddy.active = true;
+      Teddy.health = Teddy.maxHealth;
+      Teddy.phase = 'idle';
+      Teddy.phaseTimer = 0;
+      Teddy.attackTimer = 0;
+      Teddy.attackInterval = 100;
+      Teddy.projectiles = [];
+      Teddy.hitFlash = 0;
+      Teddy.defeatTimer = 0;
+      Teddy.bounceOffset = 0;
+      Teddy.angerLevel = 0;
+      Teddy.shakeAmount = 0;
+      Teddy.particles = [];
+      Teddy.won = false;
+      Teddy.winTimer = 0;
+      Teddy.confettiParts = [];
+      Teddy.x = 580;
+      Teddy.y = Teddy.groundY - Teddy.h;
+      Teddy.baseY = Teddy.y;
+      // Player health
+      Teddy.playerHealth = Teddy.playerMaxHealth;
+      Teddy.playerHitFlash = 0;
+      Teddy.playerInvincible = 0;
+      Teddy.playerDead = false;
+      Teddy.deathTimer = 0;
+      // Teddy movement AI
+      Teddy.vx = 0;
+      Teddy.vy = 0;
+      Teddy.moveDir = -1;
+      Teddy.moveTimer = 0;
+      Teddy.jumpTimer = 0;
+      Teddy.jumpCooldown = 0;
+      Teddy.teddyGrounded = true;
+      
+      // Position player on the left
+      Game.player.x = 80;
+      Game.player.y = Teddy.groundY - Game.player.height;
+      Game.player.vx = 0;
+      Game.player.vy = 0;
+      Game.player.grounded = true;
+      Game.camera.x = 0;
+    }
+
+    function updateTeddy() {
+      if (!Teddy.active) return;
+      
+      // Win animation
+      if (Teddy.won) {
+        Teddy.winTimer++;
+        // Spawn confetti
+        if (Teddy.winTimer % 3 === 0 && Teddy.confettiParts.length < 80) {
+          Teddy.confettiParts.push({
+            x: Math.random() * CANVAS_WIDTH,
+            y: -10,
+            vx: (Math.random() - 0.5) * 3,
+            vy: Math.random() * 2 + 1,
+            size: 4 + Math.random() * 4,
+            color: ['#FF6B9D', '#FFD700', '#FF69B4', '#87CEEB', '#FFB6C1', '#DDA0DD'][Math.floor(Math.random() * 6)],
+            rot: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.2
+          });
+        }
+        Teddy.confettiParts.forEach(c => {
+          c.x += c.vx;
+          c.y += c.vy;
+          c.rot += c.rotSpeed;
+        });
+        Teddy.confettiParts = Teddy.confettiParts.filter(c => c.y < CANVAS_HEIGHT + 20);
+        
+        // After 4 seconds, advance to teddy victory screen
+        if (Teddy.winTimer > 240) {
+          Teddy.active = false;
+          showTeddyVictory();
+        }
+        return;
+      }
+      
+      // Player dead - wait for respawn
+      if (Teddy.playerDead) {
+        Teddy.deathTimer++;
+        return;
+      }
+      
+      const p = Game.player;
+      
+      // Decrease player invincibility frames
+      if (Teddy.playerInvincible > 0) Teddy.playerInvincible--;
+      if (Teddy.playerHitFlash > 0) Teddy.playerHitFlash--;
+      
+      // Player movement
+      if (Game.keys.left) p.vx = -MOVE_SPEED;
+      else if (Game.keys.right) p.vx = MOVE_SPEED;
+      else p.vx *= 0.7;
+      
+      // Jump
+      if (Game.keys.jump && p.grounded) {
+        p.vy = JUMP_STRENGTH;
+        p.grounded = false;
+        playSound('jump');
+        Game.keys.jump = false;
+      }
+      
+      // Gravity
+      p.vy += GRAVITY;
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      // Ground collision for player
+      if (p.y + p.height >= Teddy.groundY) {
+        p.y = Teddy.groundY - p.height;
+        p.vy = 0;
+        p.grounded = true;
+      }
+      
+      // Keep player in bounds
+      if (p.x < 0) p.x = 0;
+      if (p.x + p.width > CANVAS_WIDTH) p.x = CANVAS_WIDTH - p.width;
+      
+      // ============================================
+      // TEDDY MOVEMENT AI
+      // ============================================
+      
+      // Decrease hit flash and shake
+      if (Teddy.hitFlash > 0) Teddy.hitFlash--;
+      if (Teddy.shakeAmount > 0) Teddy.shakeAmount *= 0.9;
+      
+      // Anger level based on missing health
+      Teddy.angerLevel = (Teddy.maxHealth - Teddy.health) / Teddy.maxHealth;
+      
+      // Teddy gravity
+      if (!Teddy.teddyGrounded) {
+        Teddy.vy += GRAVITY * 0.8; // slightly floatier than player
+      }
+      
+      // Teddy movement - chase player with some AI personality
+      const teddyMoveSpeed = 0.9 + Teddy.angerLevel * 0.9; // gets faster when angry (0.9 - 1.8)
+      const teddyCenterX = Teddy.x + Teddy.w / 2;
+      const playerCenterX = p.x + p.width / 2;
+      const distToPlayer = Math.abs(teddyCenterX - playerCenterX);
+      
+      if (Teddy.phase !== 'stunned' && Teddy.phase !== 'defeated') {
+        Teddy.moveTimer++;
+        
+        // Chase player - move toward them but not perfectly (oscillate a bit)
+        if (distToPlayer > 60) {
+          // Move toward player
+          Teddy.moveDir = playerCenterX < teddyCenterX ? -1 : 1;
+          Teddy.vx = Teddy.moveDir * teddyMoveSpeed;
+        } else if (distToPlayer < 40) {
+          // Too close, back off slightly
+          Teddy.moveDir = playerCenterX < teddyCenterX ? 1 : -1;
+          Teddy.vx = Teddy.moveDir * teddyMoveSpeed * 0.5;
+        } else {
+          // In comfortable range, slow down
+          Teddy.vx *= 0.85;
+        }
+        
+        // Add a little random jitter to movement every 60 frames
+        if (Teddy.moveTimer % 60 === 0) {
+          Teddy.vx += (Math.random() - 0.5) * 2;
+        }
+        
+        // TEDDY JUMPING
+        if (Teddy.jumpCooldown > 0) Teddy.jumpCooldown--;
+        Teddy.jumpTimer++;
+        
+        // Jump conditions:
+        // 1) Player is above teddy (trying to stomp) - dodge jump
+        // 2) Random periodic jumps that increase with anger
+        const playerAbove = p.y + p.height < Teddy.y && distToPlayer < 120;
+        const randomJumpChance = Teddy.jumpTimer > (160 - Teddy.angerLevel * 40) && Math.random() < 0.02;
+        
+        if (Teddy.teddyGrounded && Teddy.jumpCooldown <= 0 && (playerAbove || randomJumpChance)) {
+          // Jump! Strength depends on whether dodging or random
+          const jumpPower = playerAbove ? -9 : -7;
+          Teddy.vy = jumpPower;
+          Teddy.teddyGrounded = false;
+          Teddy.jumpCooldown = 60; // can't jump again for 1 second
+          Teddy.jumpTimer = 0;
+          
+          // If dodging a stomp, also move sideways away from player
+          if (playerAbove) {
+            Teddy.vx = (playerCenterX < teddyCenterX ? 1 : -1) * 3.5;
+          }
+        }
+      } else if (Teddy.phase === 'stunned') {
+        // Stunned - slide to a stop
+        Teddy.vx *= 0.9;
+      }
+      
+      // Apply teddy velocity
+      Teddy.x += Teddy.vx;
+      Teddy.y += Teddy.vy;
+      
+      // Teddy ground collision
+      if (Teddy.y + Teddy.h >= Teddy.groundY) {
+        Teddy.y = Teddy.groundY - Teddy.h;
+        Teddy.vy = 0;
+        Teddy.teddyGrounded = true;
+      }
+      
+      // Keep teddy in bounds
+      if (Teddy.x < 0) { Teddy.x = 0; Teddy.vx = 0; }
+      if (Teddy.x + Teddy.w > CANVAS_WIDTH) { Teddy.x = CANVAS_WIDTH - Teddy.w; Teddy.vx = 0; }
+      
+      // Update baseY to follow actual position (for bounce animation)
+      Teddy.baseY = Teddy.y;
+      
+      // Bounce animation only when grounded
+      if (Teddy.teddyGrounded && Teddy.phase !== 'stunned') {
+        Teddy.bounceOffset = Math.sin(Date.now() * Teddy.bounceSpeed) * 3;
+      } else {
+        Teddy.bounceOffset = 0;
+      }
+      
+      // ============================================
+      // BOSS AI PHASES
+      // ============================================
+      switch (Teddy.phase) {
+        case 'idle':
+          Teddy.attackTimer++;
+          // Attack interval decreases with anger
+           const interval = Teddy.attackInterval - Teddy.angerLevel * 30;
+          if (Teddy.attackTimer >= interval) {
+            Teddy.phase = 'charging';
+            Teddy.phaseTimer = 0;
+          }
+          break;
+          
+        case 'charging':
+          Teddy.phaseTimer++;
+          Teddy.shakeAmount = 3;
+          // Slow down while charging
+          Teddy.vx *= 0.95;
+          // Telegraph for 40 frames then throw
+          if (Teddy.phaseTimer >= 40) {
+            Teddy.phase = 'throwing';
+            Teddy.phaseTimer = 0;
+          }
+          break;
+          
+        case 'throwing':
+          // Launch projectile(s)
+          const numProjectiles = Teddy.angerLevel > 0.5 ? 3 : (Teddy.angerLevel > 0.2 ? 2 : 1);
+          for (let i = 0; i < numProjectiles; i++) {
+            // Aim directly at player's center mass
+            const targetX = p.x + p.width / 2;
+            const targetY = p.y + p.height / 2;
+            const originX = Teddy.x + (playerCenterX < teddyCenterX ? 0 : Teddy.w); // throw from correct side
+            const originY = Teddy.y + Teddy.h / 3;
+            const dx = targetX - originX;
+            const dy = targetY - originY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const speed = 3.5 + Teddy.angerLevel * 2;
+            // Normalize direction and apply speed
+            const dirX = dx / dist;
+            const dirY = dy / dist;
+            // Add spread for multiple projectiles
+            const spread = i === 0 ? 0 : (i === 1 ? 0.25 : -0.25);
+            const cosS = Math.cos(spread);
+            const sinS = Math.sin(spread);
+            Teddy.projectiles.push({
+              x: originX,
+              y: originY,
+              vx: (dirX * cosS - dirY * sinS) * speed,
+              vy: (dirX * sinS + dirY * cosS) * speed,
+              size: 15,
+              rotation: 0
+            });
+          }
+          playSound('teddyThrow');
+          Teddy.phase = 'idle';
+          Teddy.attackTimer = 0;
+          break;
+          
+        case 'stunned':
+          Teddy.phaseTimer++;
+          if (Teddy.phaseTimer >= Teddy.stunDuration) {
+            Teddy.phase = 'idle';
+            Teddy.attackTimer = 0;
+          }
+          break;
+      }
+      
+      // Update projectiles
+      Teddy.projectiles.forEach(proj => {
+        proj.x += proj.vx;
+        proj.y += proj.vy;
+        proj.rotation += 0.15;
+      });
+      // Remove off-screen projectiles
+      Teddy.projectiles = Teddy.projectiles.filter(proj =>
+        proj.x > -30 && proj.x < CANVAS_WIDTH + 30 &&
+        proj.y > -30 && proj.y < CANVAS_HEIGHT + 30
+      );
+      
+      // ============================================
+      // PLAYER-PROJECTILE COLLISION (deals damage)
+      // ============================================
+      Teddy.projectiles = Teddy.projectiles.filter(proj => {
+        if (p.x + p.width > proj.x - proj.size && p.x < proj.x + proj.size &&
+            p.y + p.height > proj.y - proj.size && p.y < proj.y + proj.size) {
+          // Knockback player
+          p.vx = proj.vx > 0 ? 5 : -5;
+          p.vy = -6;
+          p.grounded = false;
+          
+          // Deal damage if not invincible
+          if (Teddy.playerInvincible <= 0) {
+            Teddy.playerHealth--;
+            Teddy.playerHitFlash = 20;
+            Teddy.playerInvincible = 60; // 1 second of i-frames
+            Teddy.shakeAmount = 5;
+            playSound('playerHurt');
+            
+            // Check for player death
+            if (Teddy.playerHealth <= 0) {
+              Teddy.playerDead = true;
+              Teddy.deathTimer = 0;
+            }
+          }
+          
+          // Spawn hit particles
+          for (let i = 0; i < 8; i++) {
+            Teddy.particles.push({
+              x: proj.x, y: proj.y,
+              vx: (Math.random() - 0.5) * 4,
+              vy: (Math.random() - 0.5) * 4,
+              life: 1,
+              color: '#FF6B9D'
+            });
+          }
+          return false; // remove projectile
+        }
+        return true;
+      });
+      
+      // ============================================
+      // BODY COLLISION - side contact hurts player
+      // ============================================
+      if (Teddy.phase !== 'defeated' && Teddy.health > 0) {
+        if (p.x + p.width > Teddy.x + 15 && p.x < Teddy.x + Teddy.w - 15 &&
+            p.y + p.height > Teddy.y + Teddy.h / 2 && p.y < Teddy.y + Teddy.h) {
+          // Push away from center
+          if (p.x + p.width / 2 < Teddy.x + Teddy.w / 2) {
+            p.x = Teddy.x + 15 - p.width;
+            p.vx = -4;
+          } else {
+            p.x = Teddy.x + Teddy.w - 15;
+            p.vx = 4;
+          }
+          p.vy = -5;
+          p.grounded = false;
+          
+          // Deal damage on body contact
+          if (Teddy.playerInvincible <= 0) {
+            Teddy.playerHealth--;
+            Teddy.playerHitFlash = 20;
+            Teddy.playerInvincible = 60;
+            playSound('playerHurt');
+            
+            if (Teddy.playerHealth <= 0) {
+              Teddy.playerDead = true;
+              Teddy.deathTimer = 0;
+            }
+          }
+        }
+      }
+      
+      // ============================================
+      // PLAYER STOMPING TEDDY'S HEAD
+      // ============================================
+      if (Teddy.phase !== 'stunned' && Teddy.health > 0) {
+        if (p.vy > 0 &&
+            p.x + p.width > Teddy.x + 10 && p.x < Teddy.x + Teddy.w - 10 &&
+            p.y + p.height > Teddy.y && p.y + p.height < Teddy.y + Teddy.h / 2 + 10) {
+          // Successful stomp!
+          Teddy.health--;
+          Teddy.hitFlash = 15;
+          Teddy.shakeAmount = 8;
+          Teddy.phase = 'stunned';
+          Teddy.phaseTimer = 0;
+          Teddy.projectiles = []; // clear projectiles on hit
+          Teddy.vx = 0; // stop teddy movement during stun
+          
+          // Bounce player up
+          p.vy = JUMP_STRENGTH * 0.8;
+          p.grounded = false;
+          
+          playSound('teddyHit');
+          
+          // Spawn hit particles
+          for (let i = 0; i < 15; i++) {
+            Teddy.particles.push({
+              x: Teddy.x + Teddy.w / 2,
+              y: Teddy.y,
+              vx: (Math.random() - 0.5) * 6,
+              vy: -Math.random() * 5,
+              life: 1,
+              color: ['#FFD700', '#FF6B9D', '#FFB6C1'][Math.floor(Math.random() * 3)]
+            });
+          }
+          
+          // Check for defeat
+          if (Teddy.health <= 0) {
+            Teddy.phase = 'defeated';
+            Teddy.defeatTimer = 0;
+            Teddy.won = true;
+            Teddy.winTimer = 0;
+            playSound('victory');
+          }
+        }
+      }
+      
+      // Update particles
+      Teddy.particles = Teddy.particles.filter(part => {
+        part.x += part.vx;
+        part.y += part.vy;
+        part.vy += 0.1;
+        part.life -= 0.025;
+        return part.life > 0;
+      });
+    }
+
+    function drawTeddy() {
+      if (!Teddy.active) return;
+      
+      const shakeX = (Math.random() - 0.5) * Teddy.shakeAmount;
+      const shakeY = (Math.random() - 0.5) * Teddy.shakeAmount;
+      
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      
+      // === COZY BEDROOM BACKGROUND ===
+      if (teddyBgImg.complete && teddyBgImg.naturalWidth > 0) {
+        ctx.drawImage(teddyBgImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      } else {
+        // Fallback gradient if image hasn't loaded
+        const wallGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        wallGrad.addColorStop(0, '#FFF5E6');
+        wallGrad.addColorStop(1, '#FFE4C4');
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+      
+      // Floor line
+      ctx.strokeStyle = '#8B6543';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, Teddy.groundY);
+      ctx.lineTo(CANVAS_WIDTH, Teddy.groundY);
+      ctx.stroke();
+      
+      // === DRAW TEDDY BEAR ===
+      // Flip teddy to face movement direction
+      const teddyFacing = Game.player.x + Game.player.width / 2 < Teddy.x + Teddy.w / 2 ? -1 : 1;
+      ctx.save();
+      ctx.translate(Teddy.x + Teddy.w / 2, 0);
+      ctx.scale(teddyFacing, 1);
+      drawTeddyBear(-Teddy.w / 2, Teddy.y + Teddy.bounceOffset, Teddy.w, Teddy.h);
+      ctx.restore();
+      
+      // === TEDDY HEALTH BAR (above teddy) ===
+      const barW = 80;
+      const barH = 10;
+      const barX = Teddy.x + Teddy.w / 2 - barW / 2;
+      const barY = Teddy.y + Teddy.bounceOffset - 25;
+      // Background
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      // Health fill
+      const healthPct = Teddy.health / Teddy.maxHealth;
+      const healthColor = healthPct > 0.5 ? '#FF69B4' : healthPct > 0.25 ? '#FF8C00' : '#FF0000';
+      ctx.fillStyle = healthColor;
+      ctx.fillRect(barX + 1, barY + 1, (barW - 2) * healthPct, barH - 2);
+      // Border
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+      // Label
+      ctx.fillStyle = '#FFF';
+      ctx.font = '9px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('TEDDY', Teddy.x + Teddy.w / 2, barY - 3);
+      ctx.textAlign = 'left';
+      
+      // === DRAW PROJECTILES (flying hearts) ===
+      Teddy.projectiles.forEach(proj => {
+        ctx.save();
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(proj.rotation);
+        ctx.fillStyle = '#FF1493';
+        drawHeart(0, 0, proj.size);
+        ctx.restore();
+      });
+      
+      // === DRAW PLAYER (with blinking during i-frames) ===
+      if (!Teddy.playerDead) {
+        // Blink player during invincibility
+        const shouldDrawPlayer = Teddy.playerInvincible <= 0 || Math.floor(Teddy.playerInvincible / 3) % 2 === 0;
+        if (shouldDrawPlayer) {
+          // Tint player red during hit flash
+          if (Teddy.playerHitFlash > 0) {
+            ctx.globalAlpha = 0.7;
+          }
+          drawPlayer();
+          ctx.globalAlpha = 1;
+        }
+      }
+      
+      // === PLAYER HEALTH BAR (top-left HUD) ===
+      const pBarX = 15;
+      const pBarY = 15;
+      const pBarW = 120;
+      const pBarH = 14;
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(pBarX - 2, pBarY - 2, pBarW + 4, pBarH + 4);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(pBarX, pBarY, pBarW, pBarH);
+      // Health fill
+      const pHealthPct = Teddy.playerHealth / Teddy.playerMaxHealth;
+      const pHealthColor = pHealthPct > 0.5 ? '#4CAF50' : pHealthPct > 0.25 ? '#FF8C00' : '#FF0000';
+      ctx.fillStyle = pHealthColor;
+      ctx.fillRect(pBarX + 1, pBarY + 1, (pBarW - 2) * pHealthPct, pBarH - 2);
+      // Border
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pBarX, pBarY, pBarW, pBarH);
+      // Label
+      ctx.fillStyle = '#FFF';
+      ctx.font = 'bold 10px "Courier New", monospace';
+      ctx.fillText('HP', pBarX + 4, pBarY + 11);
+      // Heart icons for remaining lives
+      for (let i = 0; i < Teddy.playerMaxHealth; i++) {
+        ctx.fillStyle = i < Teddy.playerHealth ? '#FF1493' : '#555';
+        drawHeart(pBarX + pBarW + 15 + i * 18, pBarY + pBarH / 2 - 1, 6);
+      }
+      
+      // === DRAW PARTICLES ===
+      Teddy.particles.forEach(part => {
+        ctx.globalAlpha = part.life;
+        ctx.fillStyle = part.color;
+        ctx.fillRect(part.x - 2, part.y - 2, 4, 4);
+      });
+      ctx.globalAlpha = 1;
+      
+      // === WIN ANIMATION ===
+      if (Teddy.won) {
+        // Confetti
+        Teddy.confettiParts.forEach(c => {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle = c.color;
+          ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+          ctx.restore();
+        });
+        
+        // "You defeated the teddy!" text
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 28px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#FF6B9D';
+        ctx.lineWidth = 3;
+        ctx.strokeText('Teddy defeated!', CANVAS_WIDTH / 2, 80);
+        ctx.fillText('Teddy defeated!', CANVAS_WIDTH / 2, 80);
+        ctx.textAlign = 'left';
+      }
+      
+      // === GAME OVER OVERLAY ===
+      if (Teddy.playerDead) {
+        // Dark overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        
+        // Broken heart
+        ctx.fillStyle = '#FF1493';
+        drawHeart(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60, 30);
+        // Crack line through the heart
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(CANVAS_WIDTH / 2 - 2, CANVAS_HEIGHT / 2 - 85);
+        ctx.lineTo(CANVAS_WIDTH / 2 + 5, CANVAS_HEIGHT / 2 - 65);
+        ctx.lineTo(CANVAS_WIDTH / 2 - 5, CANVAS_HEIGHT / 2 - 50);
+        ctx.lineTo(CANVAS_WIDTH / 2 + 2, CANVAS_HEIGHT / 2 - 35);
+        ctx.stroke();
+        
+        // Text
+        ctx.fillStyle = '#FF6B9D';
+        ctx.font = 'bold 32px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10);
+        
+        ctx.fillStyle = '#FFB6C1';
+        ctx.font = '16px "Courier New", monospace';
+        ctx.fillText('The teddy wins this round...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
+        
+        // "Try Again" prompt (appears after 1 second)
+        if (Teddy.deathTimer > 60) {
+          const blinkAlpha = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+          ctx.globalAlpha = blinkAlpha;
+          ctx.fillStyle = '#FFF';
+          ctx.font = 'bold 18px "Courier New", monospace';
+          ctx.fillText('Press SPACE or ENTER to try again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 80);
+          ctx.globalAlpha = 1;
+        }
+        ctx.textAlign = 'left';
+      }
+      
+      // === BOSS PHASE INDICATORS ===
+      if (Teddy.phase === 'charging' && !Teddy.won && !Teddy.playerDead) {
+        // Warning indicator above teddy
+        ctx.fillStyle = '#FF0000';
+        ctx.font = 'bold 24px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        const warningAlpha = Math.sin(Date.now() * 0.01) * 0.5 + 0.5;
+        ctx.globalAlpha = warningAlpha;
+        ctx.fillText('!', Teddy.x + Teddy.w / 2, Teddy.y + Teddy.bounceOffset - 35);
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'left';
+      }
+      
+      if (Teddy.phase === 'stunned' && !Teddy.won) {
+        // Stars around teddy head when stunned
+        for (let i = 0; i < 3; i++) {
+          const angle = Date.now() * 0.005 + i * (Math.PI * 2 / 3);
+          const starX = Teddy.x + Teddy.w / 2 + Math.cos(angle) * 40;
+          const starY = Teddy.y + Teddy.bounceOffset - 10 + Math.sin(angle) * 15;
+          ctx.fillStyle = '#FFD700';
+          ctx.font = '16px Arial';
+          ctx.fillText('\u2605', starX, starY);
+        }
+      }
+      
+      // Hint text at start
+      if (!Teddy.won && !Teddy.playerDead && Teddy.health === Teddy.maxHealth && Date.now() % 3000 < 2000) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '14px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Jump on the teddy\'s head! Watch your HP!', CANVAS_WIDTH / 2, 45);
+        ctx.textAlign = 'left';
+      }
+      
+      ctx.restore(); // end shake offset
+    }
+
+    function drawTeddyBear(x, y, w, h) {
+      // Flash white when hit
+      const isFlashing = Teddy.hitFlash > 0 && Teddy.hitFlash % 4 < 2;
+      
+      // Colors
+      const bodyColor = isFlashing ? '#FFFFFF' : '#FF69B4';
+      const bellyColor = isFlashing ? '#FFFFFF' : '#FFB6C1';
+      const earInner = isFlashing ? '#FFFFFF' : '#FF1493';
+      const noseColor = isFlashing ? '#FFFFFF' : '#C71585';
+      const bowColor = isFlashing ? '#FFFFFF' : '#FF0000';
+      
+      // Defeated teddy falls over
+      if (Teddy.won) {
+        ctx.save();
+        ctx.translate(x + w / 2, y + h);
+        const fallAngle = Math.min(Teddy.winTimer * 0.02, Math.PI / 6);
+        ctx.rotate(fallAngle);
+        ctx.translate(-(x + w / 2), -(y + h));
+      }
+      
+      // Ears (behind head)
+      ctx.fillStyle = bodyColor;
+      // Left ear
+      ctx.beginPath();
+      ctx.arc(x + w * 0.2, y + 8, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = earInner;
+      ctx.beginPath();
+      ctx.arc(x + w * 0.2, y + 8, 10, 0, Math.PI * 2);
+      ctx.fill();
+      // Right ear
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(x + w * 0.8, y + 8, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = earInner;
+      ctx.beginPath();
+      ctx.arc(x + w * 0.8, y + 8, 10, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Head
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + 25, 30, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Body
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + h * 0.6, w * 0.4, h * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Belly
+      ctx.fillStyle = bellyColor;
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + h * 0.6, w * 0.25, h * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Heart on belly
+      if (!isFlashing) {
+        ctx.fillStyle = '#FF1493';
+        drawHeart(x + w / 2, y + h * 0.55, 10);
+      }
+      
+      // Arms
+      ctx.fillStyle = bodyColor;
+      // Left arm
+      const armWave = Teddy.phase === 'charging' ? Math.sin(Date.now() * 0.02) * 15 : 0;
+      ctx.beginPath();
+      ctx.ellipse(x + 5, y + h * 0.5 + armWave, 12, 22, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Right arm
+      ctx.beginPath();
+      ctx.ellipse(x + w - 5, y + h * 0.5 - armWave, 12, 22, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Legs
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.3, y + h - 10, 14, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.7, y + h - 10, 14, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Foot pads
+      ctx.fillStyle = bellyColor;
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.3, y + h - 8, 8, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.7, y + h - 8, 8, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eyes
+      if (!isFlashing) {
+        if (Teddy.phase === 'stunned' || Teddy.won) {
+          // Dizzy X eyes
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 2;
+          // Left eye X
+          ctx.beginPath();
+          ctx.moveTo(x + w * 0.35 - 5, y + 18);
+          ctx.lineTo(x + w * 0.35 + 5, y + 28);
+          ctx.moveTo(x + w * 0.35 + 5, y + 18);
+          ctx.lineTo(x + w * 0.35 - 5, y + 28);
+          ctx.stroke();
+          // Right eye X
+          ctx.beginPath();
+          ctx.moveTo(x + w * 0.65 - 5, y + 18);
+          ctx.lineTo(x + w * 0.65 + 5, y + 28);
+          ctx.moveTo(x + w * 0.65 + 5, y + 18);
+          ctx.lineTo(x + w * 0.65 - 5, y + 28);
+          ctx.stroke();
+        } else {
+          // Normal eyes - get angrier as health drops
+          ctx.fillStyle = '#333';
+          ctx.beginPath();
+          ctx.arc(x + w * 0.35, y + 23, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x + w * 0.65, y + 23, 5, 0, Math.PI * 2);
+          ctx.fill();
+          // Eye shine
+          ctx.fillStyle = '#FFF';
+          ctx.beginPath();
+          ctx.arc(x + w * 0.35 + 2, y + 21, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x + w * 0.65 + 2, y + 21, 2, 0, Math.PI * 2);
+          ctx.fill();
+          // Angry eyebrows when damaged
+          if (Teddy.angerLevel > 0) {
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.25, y + 14 - Teddy.angerLevel * 4);
+            ctx.lineTo(x + w * 0.42, y + 16);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.75, y + 14 - Teddy.angerLevel * 4);
+            ctx.lineTo(x + w * 0.58, y + 16);
+            ctx.stroke();
+          }
+        }
+      }
+      
+      // Nose (heart-shaped)
+      ctx.fillStyle = noseColor;
+      drawHeart(x + w / 2, y + 32, 5);
+      
+      // Mouth
+      if (!isFlashing) {
+        ctx.strokeStyle = '#C71585';
+        ctx.lineWidth = 2;
+        if (Teddy.phase === 'stunned' || Teddy.won) {
+          // Wobbly mouth
+          ctx.beginPath();
+          ctx.moveTo(x + w * 0.35, y + 40);
+          ctx.bezierCurveTo(x + w * 0.4, y + 43, x + w * 0.5, y + 38, x + w * 0.65, y + 40);
+          ctx.stroke();
+        } else if (Teddy.angerLevel > 0.3) {
+          // Angry frown
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 44, 8, Math.PI * 0.2, Math.PI * 0.8, true);
+          ctx.stroke();
+        } else {
+          // Normal smile
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 36, 8, 0, Math.PI);
+          ctx.stroke();
+        }
+      }
+      
+      // Bow tie
+      ctx.fillStyle = bowColor;
+      // Left triangle
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2, y + 48);
+      ctx.lineTo(x + w / 2 - 12, y + 42);
+      ctx.lineTo(x + w / 2 - 12, y + 54);
+      ctx.closePath();
+      ctx.fill();
+      // Right triangle
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2, y + 48);
+      ctx.lineTo(x + w / 2 + 12, y + 42);
+      ctx.lineTo(x + w / 2 + 12, y + 54);
+      ctx.closePath();
+      ctx.fill();
+      // Center knot
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + 48, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      if (Teddy.won) {
+        ctx.restore();
+      }
+    }
+
+    // ============================================
     // PHYSICS & COLLISION
     // ============================================
     function updatePlayer() {
@@ -2207,11 +3222,86 @@
     }
 
     function showFinalMessage() {
-      // Change the heading
+      // After all chocolates eaten - just show "Continue" to go to teddy level
+      // Don't show "It's a date" yet - that comes after defeating the teddy
+      document.getElementById('eat-choco-btn').style.display = 'none';
+      
+      document.querySelector('#victory-screen h1').textContent = 'Yum! All chocolates eaten!';
+      document.getElementById('valentine-question').innerHTML = 
+        '<span style="color: #FFD700; font-size: 20px;">But wait... there\'s one more challenge...</span>';
+      
+      // Show "Continue" button to proceed to Teddy level
+      const continueBtn = document.getElementById('continue-to-teddy-btn');
+      if (continueBtn) {
+        continueBtn.style.display = 'inline-block';
+      }
+    }
+
+    function continueTeddyLevel() {
+      // Hide victory screen, re-show game canvas elements
+      document.getElementById('victory-screen').style.display = 'none';
+      document.getElementById('level-indicator').style.display = 'block';
+      document.getElementById('continue-to-teddy-btn').style.display = 'none';
+      
+      // Reset confetti
+      confettiPieces = [];
+      confettiCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Load the teddy level (index 2)
+      Game.state = 'playing';
+      loadLevel(2);
+    }
+
+    function showTeddyVictory() {
+      Game.state = 'teddyVictory';
+      playSound('victory');
+      
+      // Hide game UI
+      document.getElementById('level-indicator').style.display = 'none';
+      document.getElementById('hearts-counter').style.display = 'none';
+      
+      // Show teddy victory screen
+      const teddyScreen = document.getElementById('teddy-victory-screen');
+      teddyScreen.style.display = 'block';
+      
+      // Load photo
+      const photoContainer = document.getElementById('teddy-victory-photo');
+      photoContainer.innerHTML = '';
+      const img = new Image();
+      img.onload = function() {
+        const pixCanvas = pixelateImage(img, 2);
+        pixCanvas.style.maxWidth = '280px';
+        pixCanvas.style.maxHeight = '280px';
+        pixCanvas.style.borderRadius = '8px';
+        pixCanvas.style.border = '4px solid #FF69B4';
+        photoContainer.appendChild(pixCanvas);
+      };
+      img.onerror = function() {
+        photoContainer.innerHTML = '<div style="font-size: 80px; margin: 20px;">&#x1F9F8;</div>';
+      };
+      img.src = '/valentine/teddy-victory.jpeg';
+      
+      // Show the "Continue" button after a moment
+      setTimeout(() => {
+        const btn = document.getElementById('teddy-continue-btn');
+        if (btn) btn.style.display = 'inline-block';
+      }, 2000);
+      
+      startConfetti();
+    }
+
+    function showItsADate() {
+      // Hide teddy victory screen
+      document.getElementById('teddy-victory-screen').style.display = 'none';
+      
+      // Show the final "It's a date" screen reusing victory screen div
+      const victoryScreen = document.getElementById('victory-screen');
+      victoryScreen.style.display = 'block';
       document.querySelector('#victory-screen h1').textContent = "It's a date!";
       document.getElementById('valentine-question').innerHTML = 
         '<span style="color: #FFD700; font-size: 24px;">See you on Feb 14</span>';
       document.getElementById('eat-choco-btn').style.display = 'none';
+      document.getElementById('continue-to-teddy-btn').style.display = 'none';
       
       // Switch to the date photo (light pixelation)
       const photoContainer = document.getElementById('valentine-photo');
@@ -2230,7 +3320,7 @@
       };
       img.src = '/valentine/valentine-date.jpeg';
       
-      // Extra confetti
+      Game.state = 'victory';
       startConfetti();
     }
 
@@ -2247,6 +3337,15 @@
       }
       
       if (Game.state === 'playing') {
+        // Game over retry for teddy level
+        if (Teddy.active && Teddy.playerDead && Teddy.deathTimer > 60) {
+          if (e.code === 'Space' || e.code === 'Enter') {
+            initTeddy();
+            e.preventDefault();
+          }
+          return;
+        }
+        
         // Runner mode: left/right switch lanes, no jump needed
         if (Runner.active) {
           switch(e.code) {
@@ -2319,6 +3418,14 @@
       eatChocolate();
     });
 
+    document.getElementById('continue-to-teddy-btn').addEventListener('click', () => {
+      continueTeddyLevel();
+    });
+
+    document.getElementById('teddy-continue-btn').addEventListener('click', () => {
+      showItsADate();
+    });
+
     // ============================================
     // MAIN GAME LOOP
     // ============================================
@@ -2331,6 +3438,8 @@
           updateRunner();
         } else if (Choco.active) {
           updateChocolate();
+        } else if (Teddy.active) {
+          updateTeddy();
         } else {
           updatePlayer();
           checkCollisions();
@@ -2344,6 +3453,8 @@
           drawRunner();
         } else if (Choco.active) {
           drawChocolate();
+        } else if (Teddy.active) {
+          drawTeddy();
         } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isRunner) {
           // Story screen for runner level - show garden bg
           if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
@@ -2363,6 +3474,13 @@
           chocoGrad.addColorStop(0.5, '#6B3A2E');
           chocoGrad.addColorStop(1, '#D2A679');
           ctx.fillStyle = chocoGrad;
+          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isTeddy) {
+          // Story screen for teddy level - show cozy bedroom bg
+          const teddyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+          teddyGrad.addColorStop(0, '#FFF5E6');
+          teddyGrad.addColorStop(1, '#FFE4C4');
+          ctx.fillStyle = teddyGrad;
           ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         } else {
           drawBackground(Game.currentLevel);
@@ -2392,6 +3510,15 @@
         const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
         grad.addColorStop(0, '#FFF0F5');
         grad.addColorStop(1, '#FFE4EC');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        
+        updateConfetti();
+      } else if (Game.state === 'teddyVictory') {
+        // Teddy victory background - warm pink
+        const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        grad.addColorStop(0, '#FFE4EC');
+        grad.addColorStop(1, '#FFB6C1');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
