@@ -294,6 +294,60 @@
       border: 4px solid #FF69B4;
       margin: 0 auto;
     }
+
+    /* Promise Day - Bridge of Promises */
+    .promise-popup {
+      background: rgba(0, 0, 0, 0.92);
+      border: 3px solid #FFD700;
+      border-radius: 12px;
+      padding: 20px 25px;
+      max-width: 85%;
+      text-align: center;
+      pointer-events: auto;
+      display: none;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.05);
+      animation: promisePopIn 0.35s ease-out;
+    }
+
+    @keyframes promisePopIn {
+      0% { transform: scale(0.7); opacity: 0; }
+      60% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .promise-popup h2 {
+      color: #FFD700;
+      font-size: 18px;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    }
+
+    .promise-choice-btn {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, #2a1a3e 0%, #1a1a2e 100%);
+      color: #FFD700;
+      border: 2px solid #FFD700;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 8px 0;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .promise-choice-btn:hover, .promise-choice-btn.selected {
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+      color: #1a1a2e;
+      transform: scale(1.03);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .promise-choice-btn:active {
+      transform: scale(0.98);
+    }
   </style>
 </head>
 <body>
@@ -333,6 +387,11 @@
         <div>
           <button class="btn teddy-btn" id="teddy-continue-btn" style="display: none;">Continue...</button>
         </div>
+      </div>
+      
+      <div class="promise-popup" id="promise-popup">
+        <h2>Make a Promise...</h2>
+        <div id="promise-choices"></div>
       </div>
       
       <div class="popup" id="popup"></div>
@@ -473,6 +532,53 @@
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
           osc.start(now);
           osc.stop(now + 0.2);
+          break;
+
+        case 'promiseSelect':
+          // Warm chime when selecting a promise - ascending bell tone
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523, now);
+          osc.frequency.exponentialRampToValueAtTime(784, now + 0.15);
+          osc.frequency.exponentialRampToValueAtTime(1047, now + 0.3);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+          // Second harmonic for richness
+          const osc2p = audioCtx.createOscillator();
+          const gain2p = audioCtx.createGain();
+          osc2p.connect(gain2p);
+          gain2p.connect(audioCtx.destination);
+          osc2p.type = 'sine';
+          osc2p.frequency.setValueAtTime(659, now + 0.05);
+          osc2p.frequency.exponentialRampToValueAtTime(988, now + 0.2);
+          gain2p.gain.setValueAtTime(0.1, now + 0.05);
+          gain2p.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc2p.start(now + 0.05);
+          osc2p.stop(now + 0.4);
+          break;
+
+        case 'bridgeAppear':
+          // Magical shimmer - sparkly ascending tones
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+          const osc3p = audioCtx.createOscillator();
+          const gain3p = audioCtx.createGain();
+          osc3p.connect(gain3p);
+          gain3p.connect(audioCtx.destination);
+          osc3p.type = 'triangle';
+          osc3p.frequency.setValueAtTime(1200, now + 0.08);
+          osc3p.frequency.exponentialRampToValueAtTime(1600, now + 0.2);
+          gain3p.gain.setValueAtTime(0.08, now + 0.08);
+          gain3p.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc3p.start(now + 0.08);
+          osc3p.stop(now + 0.35);
           break;
       }
     }
@@ -636,12 +742,21 @@
         isFinal: true  // triggers chocolate-eat victory reveal; continues to teddy after
       },
 
-      // Level 3: Teddy Day - Boss fight with a giant teddy bear (TRUE FINAL)
+      // Level 3: Teddy Day - Boss fight with a giant teddy bear
       {
         name: "Teddy Day",
         introText: "A wild teddy appears!\nIt won't let you hug it without a fight.\nJump on its head to show it who's boss!",
         endText: null,
         isTeddy: true,
+        isFinal: true
+      },
+
+      // Level 4: Promise Day - Bridge of Promises
+      {
+        name: "Promise Day",
+        introText: "Words are easy. Promises are hard.\nBut the right ones... build a bridge to forever.\n\nSelect a promise at each gap to build your path forward!",
+        endText: "Five promises made. A bridge built with love.",
+        isPromise: true,
         isFinal: true
       }
     ];
@@ -678,6 +793,15 @@
         showStory(level.introText, () => {
           Game.state = 'playing';
           initTeddy();
+        });
+        return;
+      }
+      
+      // Promise bridge mode (Promise Day)
+      if (level.isPromise) {
+        showStory(level.introText, () => {
+          Game.state = 'playing';
+          initPromise();
         });
         return;
       }
@@ -1027,6 +1151,54 @@
       // Game over
       playerDead: false,
       deathTimer: 0
+    };
+
+    // ============================================
+    // PROMISE MODE (Promise Day) - Bridge of Promises State
+    // ============================================
+
+    const promisePool = [
+      "I'll love you even when you snore",
+      "I'll love you even if you make me mad",
+      "I love your ghop ghop and gud gud",
+      "I'll love your quirky self, always",
+      "I'll always share my fries with you",
+      "I'll never spoil your shows",
+      "I'll hold your hand through anything",
+      "I'll never let you fall (well, maybe here)",
+      "I'll always be your player 2",
+      "I promise to always listen (mostly)",
+      "I'll laugh at your jokes (even the bad ones)",
+      "I'll always save the last bite for you",
+      "I'll be your teddy when it's cold",
+      "I'll love every weird thing about you",
+      "I'll always choose you"
+    ];
+
+    const PromiseBridge = {
+      active: false,
+      // Bridge layout
+      segments: [],          // solid bridge pieces {x, y, w, h}
+      gaps: [],              // gap definitions {x, w, gapIndex, choices: [...], resolved: false}
+      promisePlatforms: [],  // platforms that appear after choosing {x, y, w, h, text, alpha, glowTimer, appearTimer}
+      currentGap: 0,         // which gap the player is approaching
+      choosingPromise: false,// is the popup active?
+      selectedPromises: [],  // promises chosen so far (text array)
+      // Level geometry
+      groundY: 430,
+      bridgeY: 400,          // top of the bridge
+      bridgeH: 30,           // bridge thickness
+      totalWidth: 2400,      // total scrollable width
+      // Win state
+      won: false,
+      winTimer: 0,
+      confettiParts: [],
+      particles: [],
+      // Stars for background
+      stars: [],
+      // Respawn point
+      respawnX: 0,
+      respawnGap: 0
     };
 
     function initChocolate() {
@@ -2893,6 +3065,533 @@
     }
 
     // ============================================
+    // PROMISE BRIDGE MODE FUNCTIONS (Promise Day)
+    // ============================================
+
+    function initPromise() {
+      PromiseBridge.active = true;
+      PromiseBridge.won = false;
+      PromiseBridge.winTimer = 0;
+      PromiseBridge.choosingPromise = false;
+      PromiseBridge.currentGap = 0;
+      PromiseBridge.segments = [];
+      PromiseBridge.gaps = [];
+      PromiseBridge.promisePlatforms = [];
+      PromiseBridge.selectedPromises = [];
+      PromiseBridge.confettiParts = [];
+      PromiseBridge.particles = [];
+
+      // Generate 100 random stars for the background
+      PromiseBridge.stars = [];
+      for (let i = 0; i < 100; i++) {
+        PromiseBridge.stars.push({
+          x: Math.random() * 2400,
+          y: Math.random() * 300,
+          size: 1 + Math.random() * 2,
+          twinkleSpeed: 0.02 + Math.random() * 0.04,
+          twinkleOffset: Math.random() * Math.PI * 2
+        });
+      }
+
+      // Build bridge layout: 5 gaps with solid segments between them
+      const segmentW = 250;
+      const gapW = 140;
+      const bridgeY = 400;
+      const bridgeH = 30;
+      let curX = 0;
+
+      // Starting solid segment
+      PromiseBridge.segments.push({ x: curX, y: bridgeY, w: segmentW, h: bridgeH });
+      curX += segmentW;
+
+      // Shuffle promisePool and take 3 per gap (15 total for 5 gaps)
+      const shuffled = [...promisePool];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      for (let g = 0; g < 5; g++) {
+        // Gap
+        PromiseBridge.gaps.push({
+          x: curX,
+          w: gapW,
+          gapIndex: g,
+          choices: shuffled.slice(g * 3, g * 3 + 3),
+          resolved: false
+        });
+        curX += gapW;
+        // Solid segment after gap
+        PromiseBridge.segments.push({ x: curX, y: bridgeY, w: segmentW, h: bridgeH });
+        curX += segmentW;
+      }
+
+      PromiseBridge.totalWidth = curX;
+      PromiseBridge.bridgeY = bridgeY;
+      PromiseBridge.bridgeH = bridgeH;
+
+      // Player start position
+      const p = Game.player;
+      p.x = 80;
+      p.y = bridgeY - p.height - 2;
+      p.vx = 0;
+      p.vy = 0;
+      p.grounded = true;
+      Game.camera.x = 0;
+
+      PromiseBridge.respawnX = 80;
+      PromiseBridge.respawnGap = 0;
+    }
+
+    function updatePromise() {
+      if (!PromiseBridge.active) return;
+
+      const bridgeY = PromiseBridge.bridgeY;
+      const bridgeH = PromiseBridge.bridgeH;
+      const totalWidth = PromiseBridge.totalWidth;
+
+      // --- Win animation branch ---
+      if (PromiseBridge.won) {
+        PromiseBridge.winTimer++;
+        // Spawn confetti
+        if (PromiseBridge.winTimer % 3 === 0) {
+          PromiseBridge.confettiParts.push({
+            x: Math.random() * CANVAS_WIDTH + Game.camera.x,
+            y: Game.camera.x + Math.random() * -100,
+            vx: (Math.random() - 0.5) * 4,
+            vy: 1.5 + Math.random() * 2.5,
+            size: 5 + Math.random() * 8,
+            color: ['#FFD700', '#FF69B4', '#FF6B9D', '#FFA500', '#FF1493', '#87CEEB'][Math.floor(Math.random() * 6)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 10,
+            life: 1
+          });
+        }
+        // Update confetti
+        PromiseBridge.confettiParts.forEach(c => {
+          c.x += c.vx;
+          c.y += c.vy;
+          c.rotation += c.rotationSpeed;
+          if (c.y > CANVAS_HEIGHT + Game.camera.x + 50) {
+            c.y = Game.camera.x - 20;
+            c.x = Math.random() * CANVAS_WIDTH + Game.camera.x;
+          }
+        });
+        // After 180 frames (~3s), transition to final screen
+        if (PromiseBridge.winTimer > 180) {
+          PromiseBridge.active = false;
+          playSound('levelComplete');
+          showItsADate();
+        }
+        return;
+      }
+
+      // --- Promise choosing: freeze player ---
+      if (PromiseBridge.choosingPromise) return;
+
+      // --- Player movement ---
+      const p = Game.player;
+      if (Game.keys.left) {
+        p.vx = -MOVE_SPEED;
+        p.facing = -1;
+      } else if (Game.keys.right) {
+        p.vx = MOVE_SPEED;
+        p.facing = 1;
+      } else {
+        p.vx *= 0.8;
+      }
+
+      // Jump
+      if (Game.keys.jump && p.grounded) {
+        p.vy = JUMP_STRENGTH;
+        p.grounded = false;
+        playSound('jump');
+        Game.keys.jump = false;
+      }
+
+      // Gravity
+      p.vy += GRAVITY;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // --- Platform collision ---
+      p.grounded = false;
+
+      // Check solid bridge segments
+      for (const seg of PromiseBridge.segments) {
+        if (p.x + p.width > seg.x && p.x < seg.x + seg.w) {
+          if (p.vy >= 0 && p.y + p.height >= seg.y && p.y + p.height <= seg.y + seg.h + p.vy + 2) {
+            p.y = seg.y - p.height;
+            p.vy = 0;
+            p.grounded = true;
+          }
+        }
+      }
+
+      // Check promise platforms (created after selection)
+      for (const plat of PromiseBridge.promisePlatforms) {
+        if (p.x + p.width > plat.x && p.x < plat.x + plat.w) {
+          if (p.vy >= 0 && p.y + p.height >= plat.y && p.y + p.height <= plat.y + plat.h + p.vy + 2) {
+            p.y = plat.y - p.height;
+            p.vy = 0;
+            p.grounded = true;
+          }
+        }
+      }
+
+      // Keep player in bounds
+      if (p.x < 0) p.x = 0;
+      if (p.x + p.width > totalWidth) p.x = totalWidth - p.width;
+
+      // Camera follow: smooth lerp
+      const targetCamX = p.x - CANVAS_WIDTH / 3;
+      Game.camera.x += (targetCamX - Game.camera.x) * 0.08;
+      if (Game.camera.x < 0) Game.camera.x = 0;
+      if (Game.camera.x > totalWidth - CANVAS_WIDTH) Game.camera.x = totalWidth - CANVAS_WIDTH;
+
+      // --- Gap approach detection ---
+      for (const gap of PromiseBridge.gaps) {
+        if (gap.resolved) continue;
+        const gapLeft = gap.x;
+        // If player's right edge is within ~20px of the gap's left edge and grounded
+        if (p.x + p.width >= gapLeft - 20 && p.x + p.width <= gapLeft + 10 && p.grounded) {
+          PromiseBridge.choosingPromise = true;
+          PromiseBridge.currentGap = gap.gapIndex;
+          // Update respawn to the segment before this gap
+          PromiseBridge.respawnX = Math.max(0, gap.x - 250 + 40);
+          showPromiseChoice(gap.gapIndex);
+          break;
+        }
+      }
+
+      // --- Fall detection ---
+      if (p.y > CANVAS_HEIGHT + 80) {
+        p.x = PromiseBridge.respawnX;
+        p.y = bridgeY - p.height - 2;
+        p.vx = 0;
+        p.vy = 0;
+        p.grounded = true;
+        playSound('playerHurt');
+      }
+
+      // --- Win detection ---
+      if (p.x > totalWidth - 100) {
+        PromiseBridge.won = true;
+        PromiseBridge.winTimer = 0;
+        playSound('chocoWin');
+      }
+
+      // --- Update particles ---
+      PromiseBridge.particles = PromiseBridge.particles.filter(part => {
+        part.x += part.vx;
+        part.y += part.vy;
+        part.vy += 0.1;
+        part.life -= 0.02;
+        return part.life > 0;
+      });
+    }
+
+    function showPromiseChoice(gapIndex) {
+      const gap = PromiseBridge.gaps[gapIndex];
+      const popup = document.getElementById('promise-popup');
+      const choicesDiv = document.getElementById('promise-choices');
+
+      // Clear previous buttons
+      choicesDiv.innerHTML = '';
+
+      gap.choices.forEach((promiseText) => {
+        const btn = document.createElement('button');
+        btn.className = 'promise-choice-btn';
+        btn.textContent = promiseText;
+        btn.addEventListener('click', () => {
+          // Hide popup
+          popup.style.display = 'none';
+
+          // Mark gap as resolved
+          gap.resolved = true;
+          PromiseBridge.choosingPromise = false;
+
+          // Create a promise platform
+          PromiseBridge.promisePlatforms.push({
+            x: gap.x,
+            y: PromiseBridge.bridgeY,
+            w: gap.w,
+            h: PromiseBridge.bridgeH,
+            text: promiseText,
+            alpha: 0,
+            glowTimer: 0,
+            appearTimer: 0
+          });
+
+          // Record the selected promise
+          PromiseBridge.selectedPromises.push(promiseText);
+
+          // Play sounds
+          playSound('promiseSelect');
+          setTimeout(() => playSound('bridgeAppear'), 200);
+
+          // Spawn golden particles at gap center
+          const cx = gap.x + gap.w / 2;
+          const cy = PromiseBridge.bridgeY + PromiseBridge.bridgeH / 2;
+          for (let i = 0; i < 20; i++) {
+            PromiseBridge.particles.push({
+              x: cx,
+              y: cy,
+              vx: (Math.random() - 0.5) * 8,
+              vy: (Math.random() - 0.5) * 8,
+              size: 3 + Math.random() * 5,
+              color: ['#FFD700', '#FF69B4', '#FFC0CB', '#FFFACD'][Math.floor(Math.random() * 4)],
+              life: 1
+            });
+          }
+
+          // Update respawn to next gap
+          PromiseBridge.respawnGap = gapIndex + 1;
+        });
+        choicesDiv.appendChild(btn);
+      });
+
+      // Show the popup
+      popup.style.display = 'block';
+    }
+
+    function drawPromise() {
+      // --- Background: twilight sky ---
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+      skyGrad.addColorStop(0, '#0d0d2b');
+      skyGrad.addColorStop(0.5, '#1a1a3e');
+      skyGrad.addColorStop(1, '#2d1b4e');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Stars with twinkling
+      const time = Date.now() / 1000;
+      PromiseBridge.stars.forEach(star => {
+        const screenX = star.x - Game.camera.x * 0.3; // parallax
+        if (screenX < -10 || screenX > CANVAS_WIDTH + 10) return;
+        const alpha = 0.4 + 0.6 * Math.sin(time * star.twinkleSpeed * 60 + star.twinkleOffset);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(screenX, star.y, star.size, star.size);
+      });
+
+      // Moon
+      ctx.save();
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = '#FFE4B5';
+      ctx.fillStyle = '#FFE4B5';
+      ctx.beginPath();
+      ctx.arc(650, 80, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // Moon inner glow
+      ctx.fillStyle = 'rgba(255, 228, 181, 0.15)';
+      ctx.beginPath();
+      ctx.arc(650, 80, 50, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Faint aurora wisps
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      ctx.strokeStyle = '#64C8FF';
+      ctx.lineWidth = 40;
+      ctx.beginPath();
+      ctx.moveTo(0, 120);
+      ctx.quadraticCurveTo(CANVAS_WIDTH * 0.3, 60 + Math.sin(time * 0.5) * 20, CANVAS_WIDTH * 0.7, 100);
+      ctx.stroke();
+      ctx.strokeStyle = '#C864FF';
+      ctx.beginPath();
+      ctx.moveTo(CANVAS_WIDTH * 0.2, 150);
+      ctx.quadraticCurveTo(CANVAS_WIDTH * 0.5, 90 + Math.sin(time * 0.3 + 1) * 25, CANVAS_WIDTH, 130);
+      ctx.stroke();
+      ctx.strokeStyle = '#64FFB8';
+      ctx.beginPath();
+      ctx.moveTo(CANVAS_WIDTH * 0.4, 100);
+      ctx.quadraticCurveTo(CANVAS_WIDTH * 0.6, 50 + Math.sin(time * 0.7 + 2) * 15, CANVAS_WIDTH * 0.9, 80);
+      ctx.stroke();
+      ctx.restore();
+
+      // --- Bridge segments (stone look) ---
+      PromiseBridge.segments.forEach(seg => {
+        const sx = seg.x - Game.camera.x;
+        if (sx > CANVAS_WIDTH + 10 || sx + seg.w < -10) return;
+
+        // Main bridge body
+        ctx.fillStyle = '#3a3a4a';
+        ctx.fillRect(sx, seg.y, seg.w, seg.h);
+
+        // Brick details
+        ctx.strokeStyle = '#4a4a5a';
+        ctx.lineWidth = 1;
+        for (let row = 0; row < 2; row++) {
+          const ry = seg.y + row * 15;
+          const offset = row % 2 === 0 ? 0 : 15;
+          for (let bx = offset; bx < seg.w; bx += 30) {
+            ctx.strokeRect(sx + bx, ry, 30, 15);
+          }
+        }
+
+        // Top highlight
+        ctx.fillStyle = '#5a5a6a';
+        ctx.fillRect(sx, seg.y, seg.w, 2);
+
+        // Bottom shadow
+        ctx.fillStyle = '#2a2a3a';
+        ctx.fillRect(sx, seg.y + seg.h - 2, seg.w, 2);
+      });
+
+      // --- Gaps: void with mist ---
+      PromiseBridge.gaps.forEach(gap => {
+        if (gap.resolved) return;
+        const gx = gap.x - Game.camera.x;
+        if (gx > CANVAS_WIDTH + 10 || gx + gap.w < -10) return;
+
+        // Dark void below bridge
+        const voidGrad = ctx.createLinearGradient(0, PromiseBridge.bridgeY, 0, CANVAS_HEIGHT);
+        voidGrad.addColorStop(0, 'rgba(5, 5, 15, 0.9)');
+        voidGrad.addColorStop(1, 'rgba(10, 0, 20, 0.6)');
+        ctx.fillStyle = voidGrad;
+        ctx.fillRect(gx, PromiseBridge.bridgeY, gap.w, CANVAS_HEIGHT - PromiseBridge.bridgeY);
+
+        // Floating mist particles
+        for (let m = 0; m < 3; m++) {
+          const mx = gx + gap.w * 0.2 + Math.sin(time * 0.8 + m * 2) * gap.w * 0.3;
+          const my = PromiseBridge.bridgeY + 20 + m * 25 + Math.sin(time * 0.5 + m) * 10;
+          ctx.fillStyle = `rgba(150, 130, 200, ${0.1 + Math.sin(time + m) * 0.05})`;
+          ctx.beginPath();
+          ctx.ellipse(mx, my, 20, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // --- Promise platforms (golden, glowing) ---
+      PromiseBridge.promisePlatforms.forEach(plat => {
+        const sx = plat.x - Game.camera.x;
+        if (sx > CANVAS_WIDTH + 10 || sx + plat.w < -10) return;
+
+        plat.appearTimer++;
+        plat.glowTimer += 0.05;
+
+        // Scale-in animation
+        const scale = Math.min(1, plat.appearTimer / 20);
+        const drawW = plat.w * scale;
+        const drawH = plat.h * scale;
+        const drawX = sx + (plat.w - drawW) / 2;
+        const drawY = plat.y + (plat.h - drawH) / 2;
+
+        // Glow effect
+        ctx.save();
+        ctx.shadowBlur = 10 + Math.sin(plat.glowTimer) * 5;
+        ctx.shadowColor = '#FFD700';
+
+        // Golden platform
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+
+        // Pulsing glow border
+        const borderAlpha = 0.5 + Math.sin(plat.glowTimer * 2) * 0.3;
+        ctx.strokeStyle = `rgba(255, 215, 0, ${borderAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(drawX - 1, drawY - 1, drawW + 2, drawH + 2);
+
+        ctx.restore();
+
+        // Promise text below platform
+        if (scale >= 1) {
+          ctx.save();
+          ctx.font = '11px monospace';
+          ctx.textAlign = 'center';
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(plat.text, sx + plat.w / 2, plat.y + plat.h + 16);
+          ctx.restore();
+        }
+      });
+
+      // --- Draw player ---
+      drawPlayer();
+
+      // --- Draw particles ---
+      PromiseBridge.particles.forEach(part => {
+        ctx.globalAlpha = part.life;
+        ctx.fillStyle = part.color;
+        ctx.fillRect(part.x - Game.camera.x, part.y, part.size, part.size);
+      });
+      ctx.globalAlpha = 1;
+
+      // --- Win animation ---
+      if (PromiseBridge.won) {
+        // Confetti
+        PromiseBridge.confettiParts.forEach(c => {
+          ctx.save();
+          ctx.translate(c.x - Game.camera.x, c.y);
+          ctx.rotate(c.rotation * Math.PI / 180);
+          ctx.fillStyle = c.color;
+          ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+          ctx.restore();
+        });
+
+        // "Bridge Complete!" text
+        const fadeIn = Math.min(1, PromiseBridge.winTimer / 60);
+        ctx.save();
+        ctx.globalAlpha = fadeIn;
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#FFD700';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('Bridge Complete!', CANVAS_WIDTH / 2, 80);
+
+        // List all 5 selected promises
+        ctx.font = '14px monospace';
+        ctx.fillStyle = '#FFD700';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+        PromiseBridge.selectedPromises.forEach((prom, i) => {
+          ctx.fillText(`★ ${prom}`, CANVAS_WIDTH / 2, 130 + i * 28);
+        });
+        ctx.restore();
+      }
+
+      // --- HUD overlay ---
+      ctx.save();
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      const promiseCount = PromiseBridge.selectedPromises.length;
+      ctx.fillText(`Promises: ${promiseCount}/5`, CANVAS_WIDTH - 20, 30);
+
+      // Small hearts/stars for each promise made
+      for (let i = 0; i < promiseCount; i++) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = '14px monospace';
+        ctx.fillText('★', CANVAS_WIDTH - 120 + i * 20, 50);
+      }
+      ctx.restore();
+    }
+
+    function continuePromiseLevel() {
+      // Hide teddy victory screen
+      document.getElementById('teddy-victory-screen').style.display = 'none';
+
+      // Show game UI
+      document.getElementById('level-indicator').style.display = 'block';
+
+      // Hide teddy continue button
+      document.getElementById('teddy-continue-btn').style.display = 'none';
+
+      // Clear confetti
+      confettiPieces = [];
+      confettiCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Load Promise Day (level index 3)
+      Game.state = 'playing';
+      loadLevel(3);
+    }
+
+    // ============================================
     // PHYSICS & COLLISION
     // ============================================
     function updatePlayer() {
@@ -3346,6 +4045,12 @@
           return;
         }
         
+        // Promise mode: block input during popup
+        if (PromiseBridge.active && PromiseBridge.choosingPromise) {
+          e.preventDefault();
+          return;
+        }
+
         // Runner mode: left/right switch lanes, no jump needed
         if (Runner.active) {
           switch(e.code) {
@@ -3423,7 +4128,7 @@
     });
 
     document.getElementById('teddy-continue-btn').addEventListener('click', () => {
-      showItsADate();
+      continuePromiseLevel();
     });
 
     // ============================================
@@ -3440,6 +4145,8 @@
           updateChocolate();
         } else if (Teddy.active) {
           updateTeddy();
+        } else if (PromiseBridge.active) {
+          updatePromise();
         } else {
           updatePlayer();
           checkCollisions();
@@ -3455,6 +4162,8 @@
           drawChocolate();
         } else if (Teddy.active) {
           drawTeddy();
+        } else if (PromiseBridge.active) {
+          drawPromise();
         } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isRunner) {
           // Story screen for runner level - show garden bg
           if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
@@ -3481,6 +4190,14 @@
           teddyGrad.addColorStop(0, '#FFF5E6');
           teddyGrad.addColorStop(1, '#FFE4C4');
           ctx.fillStyle = teddyGrad;
+          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isPromise) {
+          // Story screen for promise level - twilight gradient
+          const promGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+          promGrad.addColorStop(0, '#0d0d2b');
+          promGrad.addColorStop(0.5, '#1a1a3e');
+          promGrad.addColorStop(1, '#2d1b4e');
+          ctx.fillStyle = promGrad;
           ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         } else {
           drawBackground(Game.currentLevel);
