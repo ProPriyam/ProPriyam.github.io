@@ -348,6 +348,20 @@
     .promise-choice-btn:active {
       transform: scale(0.98);
     }
+
+    .meeting-btn {
+      background: #E91E63 !important;
+      border: 3px solid #FF6B9D !important;
+      font-size: 20px !important;
+      padding: 12px 35px !important;
+      margin-top: 15px !important;
+      animation: teddyBtnPulse 2s ease-in-out infinite;
+    }
+
+    .meeting-btn:hover {
+      background: #C2185B !important;
+      box-shadow: 0 0 20px rgba(233, 30, 99, 0.7) !important;
+    }
   </style>
 </head>
 <body>
@@ -378,6 +392,7 @@
         <div>
           <button class="btn choco-btn" id="eat-choco-btn">Eat Chocolate</button>
           <button class="btn teddy-btn" id="continue-to-teddy-btn" style="display: none;">Continue...</button>
+          <button class="btn meeting-btn" id="continue-to-meeting-btn" style="display: none;">Continue...</button>
         </div>
       </div>
       
@@ -649,6 +664,9 @@
     const teddyBgImg = new Image();
     teddyBgImg.src = '/valentine/teddy-level-bg.png';
 
+    const finalValentineBgImg = new Image();
+    finalValentineBgImg.src = '/valentine/final-valentine-bg.png';
+
     const Runner = {
       active: false,
       lane: 1,           // 0=left, 1=center, 2=right
@@ -758,6 +776,15 @@
         endText: "Five promises made. A bridge built with love.",
         isPromise: true,
         isFinal: true
+      },
+
+      // Level 5: Valentine's Day - Two Player Meeting
+      {
+        name: "Valentine's Day",
+        introText: "Two hearts. One path.\n\nPlayer 1 (WASD): Her\nPlayer 2 (Arrow Keys): Him\n\nFind each other.",
+        endText: null,
+        isMeeting: true,
+        isFinal: true
       }
     ];
 
@@ -802,6 +829,15 @@
         showStory(level.introText, () => {
           Game.state = 'playing';
           initPromise();
+        });
+        return;
+      }
+      
+      // Meeting mode (Valentine's Day) - two player
+      if (level.isMeeting) {
+        showStory(level.introText, () => {
+          Game.state = 'playing';
+          initMeeting();
         });
         return;
       }
@@ -1199,6 +1235,27 @@
       // Respawn point
       respawnX: 0,
       respawnGap: 0
+    };
+
+    // ============================================
+    // MEETING MODE (Valentine's Day) - Two Player
+    // ============================================
+    const Meeting = {
+      active: false,
+      girl: { x: 60, y: 0, vx: 0, width: 32, height: 32, facing: 1 },
+      man:  { x: 700, y: 0, vx: 0, width: 32, height: 32, facing: -1 },
+      keys1: { left: false, right: false },  // WASD - girl
+      keys2: { left: false, right: false },  // Arrow keys - man
+      groundY: 440,
+      met: false,
+      kissTimer: 0,
+      heartParticles: [],
+      ambientHearts: [],
+      // Happy Valentine finale
+      showValentine: false,
+      valentineTimer: 0,
+      rosePetals: [],
+      textAlpha: 0
     };
 
     function initChocolate() {
@@ -3989,6 +4046,445 @@
       startConfetti();
     }
 
+    // ============================================
+    // MEETING LEVEL (Valentine's Day) - Two Player
+    // ============================================
+    function initMeeting() {
+      Meeting.active = true;
+      Meeting.met = false;
+      Meeting.kissTimer = 0;
+      Meeting.showValentine = false;
+      Meeting.valentineTimer = 0;
+      Meeting.textAlpha = 0;
+      Meeting.heartParticles = [];
+      Meeting.rosePetals = [];
+      Meeting.keys1 = { left: false, right: false };
+      Meeting.keys2 = { left: false, right: false };
+
+      // Girl starts on the left, Man on the right
+      Meeting.girl.x = 60;
+      Meeting.girl.y = Meeting.groundY - Meeting.girl.height;
+      Meeting.girl.vx = 0;
+      Meeting.girl.facing = 1;
+
+      Meeting.man.x = 700;
+      Meeting.man.y = Meeting.groundY - Meeting.man.height;
+      Meeting.man.vx = 0;
+      Meeting.man.facing = -1;
+
+      // Ambient floating hearts
+      Meeting.ambientHearts = [];
+      for (let i = 0; i < 12; i++) {
+        Meeting.ambientHearts.push({
+          x: Math.random() * CANVAS_WIDTH,
+          y: Math.random() * CANVAS_HEIGHT * 0.7,
+          size: 4 + Math.random() * 6,
+          alpha: 0.15 + Math.random() * 0.25,
+          vy: -0.2 - Math.random() * 0.3,
+          vx: (Math.random() - 0.5) * 0.3,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    const MEETING_SPEED = 1.1;
+
+    function updateMeeting() {
+      if (Meeting.showValentine) {
+        updateHappyValentine();
+        return;
+      }
+
+      if (Meeting.met) {
+        Meeting.kissTimer++;
+        // Spawn heart particles from kiss point
+        if (Meeting.kissTimer % 6 === 0) {
+          const kissX = (Meeting.girl.x + Meeting.girl.width / 2 + Meeting.man.x + Meeting.man.width / 2) / 2;
+          const kissY = Meeting.girl.y + 4;
+          Meeting.heartParticles.push({
+            x: kissX + (Math.random() - 0.5) * 10,
+            y: kissY,
+            vx: (Math.random() - 0.5) * 2,
+            vy: -1 - Math.random() * 2,
+            size: 4 + Math.random() * 6,
+            alpha: 1,
+            color: ['#FF6B9D', '#FF1744', '#E91E63', '#FF69B4'][Math.floor(Math.random() * 4)]
+          });
+        }
+        // Update heart particles
+        Meeting.heartParticles.forEach(h => {
+          h.x += h.vx;
+          h.y += h.vy;
+          h.alpha -= 0.012;
+        });
+        Meeting.heartParticles = Meeting.heartParticles.filter(h => h.alpha > 0);
+
+        // After ~3 seconds of kiss, transition to Happy Valentine on canvas
+        if (Meeting.kissTimer > 180) {
+          Meeting.showValentine = true;
+          Meeting.valentineTimer = 0;
+          Meeting.textAlpha = 0;
+          playSound('victory');
+          initRosePetals();
+          // Hide game UI
+          document.getElementById('level-indicator').style.display = 'none';
+        }
+        return;
+      }
+
+      // --- Girl movement (WASD) ---
+      const g = Meeting.girl;
+      if (Meeting.keys1.left) {
+        g.vx = -MEETING_SPEED;
+        g.facing = -1;
+      } else if (Meeting.keys1.right) {
+        g.vx = MEETING_SPEED;
+        g.facing = 1;
+      } else {
+        g.vx *= 0.8;
+        if (Math.abs(g.vx) < 0.1) g.vx = 0;
+      }
+      g.x += g.vx;
+      // Keep in bounds
+      if (g.x < 0) g.x = 0;
+      if (g.x + g.width > CANVAS_WIDTH) g.x = CANVAS_WIDTH - g.width;
+
+      // --- Man movement (Arrow keys) ---
+      const m = Meeting.man;
+      if (Meeting.keys2.left) {
+        m.vx = -MEETING_SPEED;
+        m.facing = -1;
+      } else if (Meeting.keys2.right) {
+        m.vx = MEETING_SPEED;
+        m.facing = 1;
+      } else {
+        m.vx *= 0.8;
+        if (Math.abs(m.vx) < 0.1) m.vx = 0;
+      }
+      m.x += m.vx;
+      if (m.x < 0) m.x = 0;
+      if (m.x + m.width > CANVAS_WIDTH) m.x = CANVAS_WIDTH - m.width;
+
+      // --- Collision detection: did they meet? ---
+      const gRight = g.x + g.width;
+      const mLeft = m.x;
+      const gLeft = g.x;
+      const mRight = m.x + m.width;
+      // Check overlap
+      if (gRight > mLeft && gLeft < mRight) {
+        Meeting.met = true;
+        Meeting.kissTimer = 0;
+        // Face each other
+        if (g.x < m.x) {
+          g.facing = 1;
+          m.facing = -1;
+        } else {
+          g.facing = -1;
+          m.facing = 1;
+        }
+        g.vx = 0;
+        m.vx = 0;
+        playSound('chocoWin');
+      }
+
+      // Update ambient hearts
+      Meeting.ambientHearts.forEach(h => {
+        h.y += h.vy;
+        h.x += h.vx + Math.sin(Date.now() / 1000 + h.phase) * 0.2;
+        if (h.y < -20) {
+          h.y = CANVAS_HEIGHT * 0.7;
+          h.x = Math.random() * CANVAS_WIDTH;
+        }
+      });
+    }
+
+    function drawGirl(x, y, vx, facing) {
+      ctx.save();
+      ctx.translate(x + 16, y + 16);
+      ctx.scale(facing, 1);
+      ctx.translate(-16, -16);
+
+      // Body - pink dress
+      ctx.fillStyle = '#E91E63';
+      ctx.fillRect(4, 8, 24, 20);
+
+      // Dress bottom flare
+      ctx.fillStyle = '#E91E63';
+      ctx.fillRect(2, 22, 28, 6);
+
+      // Head
+      ctx.fillStyle = '#FFD5B5';
+      ctx.fillRect(6, 0, 20, 14);
+
+      // Hair - dark brown, longer
+      ctx.fillStyle = '#4A2A1A';
+      ctx.fillRect(4, -2, 24, 8);
+      // Side hair
+      ctx.fillRect(4, 6, 4, 10);
+      ctx.fillRect(24, 6, 4, 10);
+
+      // Hair bow
+      ctx.fillStyle = '#FF1744';
+      ctx.fillRect(22, -2, 8, 4);
+      ctx.fillRect(24, -4, 4, 2);
+      ctx.fillRect(24, 2, 4, 2);
+
+      // Eyes
+      ctx.fillStyle = '#333';
+      ctx.fillRect(10, 4, 4, 4);
+      ctx.fillRect(18, 4, 4, 4);
+      // Eye shine
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(11, 4, 2, 2);
+      ctx.fillRect(19, 4, 2, 2);
+
+      // Blush
+      ctx.fillStyle = 'rgba(255, 105, 180, 0.4)';
+      ctx.fillRect(8, 8, 4, 2);
+      ctx.fillRect(20, 8, 4, 2);
+
+      // Smile
+      ctx.fillStyle = '#E91E63';
+      ctx.fillRect(12, 10, 8, 2);
+
+      // Legs
+      ctx.fillStyle = '#FFD5B5';
+      const legOffset = Math.abs(Math.sin(Date.now() / 120)) * (Math.abs(vx) > 0.1 ? 4 : 0);
+      ctx.fillRect(8, 28, 6, 4 + legOffset);
+      ctx.fillRect(18, 28, 6, 4 + (4 - legOffset));
+
+      ctx.restore();
+    }
+
+    function drawMan(x, y, vx, facing) {
+      ctx.save();
+      ctx.translate(x + 16, y + 16);
+      ctx.scale(facing, 1);
+      ctx.translate(-16, -16);
+
+      // Body - blue shirt
+      ctx.fillStyle = '#4A90D9';
+      ctx.fillRect(4, 8, 24, 20);
+
+      // Head
+      ctx.fillStyle = '#FFD5B5';
+      ctx.fillRect(6, 0, 20, 14);
+
+      // Hair - dark, short
+      ctx.fillStyle = '#2C1810';
+      ctx.fillRect(4, -2, 24, 7);
+
+      // Eyes
+      ctx.fillStyle = '#333';
+      ctx.fillRect(10, 4, 4, 4);
+      ctx.fillRect(18, 4, 4, 4);
+
+      // Smile
+      ctx.fillStyle = '#333';
+      ctx.fillRect(12, 10, 8, 2);
+
+      // Legs - dark pants
+      ctx.fillStyle = '#333';
+      const legOffset = Math.abs(Math.sin(Date.now() / 120)) * (Math.abs(vx) > 0.1 ? 4 : 0);
+      ctx.fillRect(8, 28, 6, 4 + legOffset);
+      ctx.fillRect(18, 28, 6, 4 + (4 - legOffset));
+
+      ctx.restore();
+    }
+
+    function drawMeeting() {
+      const g = Meeting.girl;
+      const m = Meeting.man;
+
+      // Background - use final-valentine-bg for entire level
+      drawValentineBg();
+
+      if (Meeting.showValentine) {
+        // Rose petals
+        Meeting.rosePetals.forEach(p => {
+          ctx.globalAlpha = 0.85;
+          drawRosePetal(p.x, p.y, p.size, p.rotation, p.color);
+        });
+        ctx.globalAlpha = 1;
+
+        // Big "Happy Valentine's Day" text
+        ctx.globalAlpha = Meeting.textAlpha;
+
+        const pulse = 1 + Math.sin(Date.now() / 500) * 0.03;
+        ctx.save();
+        ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.scale(pulse, pulse);
+
+        ctx.shadowColor = '#FF6B9D';
+        ctx.shadowBlur = 30;
+        ctx.font = 'bold 56px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.strokeStyle = '#FF1744';
+        ctx.lineWidth = 4;
+        ctx.strokeText('Happy', 0, -35);
+        ctx.strokeText("Valentine's Day", 0, 30);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Happy', 0, -35);
+        ctx.fillText("Valentine's Day", 0, 30);
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+
+        // Orbiting hearts around text
+        const t = Date.now() / 1000;
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2 + t * 0.3;
+          const radius = 180 + Math.sin(t + i) * 20;
+          const hx = CANVAS_WIDTH / 2 + Math.cos(angle) * radius;
+          const hy = CANVAS_HEIGHT / 2 - 10 + Math.sin(angle) * 80;
+          ctx.fillStyle = '#FF6B9D';
+          ctx.globalAlpha = Meeting.textAlpha * 0.6;
+          drawHeart(hx, hy, 8 + Math.sin(t * 2 + i) * 3);
+        }
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      // Ambient floating hearts
+      Meeting.ambientHearts.forEach(h => {
+        ctx.globalAlpha = h.alpha;
+        ctx.fillStyle = '#FF6B9D';
+        drawHeart(h.x, h.y, h.size);
+      });
+      ctx.globalAlpha = 1;
+
+      // Player labels
+      ctx.font = '10px "Courier New"';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FF69B4';
+      ctx.fillText('WASD', g.x + g.width / 2, g.y - 8);
+      ctx.fillStyle = '#64B5F6';
+      ctx.fillText('Arrow Keys', m.x + m.width / 2, m.y - 8);
+
+      // Draw characters
+      drawGirl(g.x, g.y, g.vx, g.facing);
+      drawMan(m.x, m.y, m.vx, m.facing);
+
+      // Kiss heart particles
+      Meeting.heartParticles.forEach(h => {
+        ctx.globalAlpha = h.alpha;
+        ctx.fillStyle = h.color;
+        drawHeart(h.x, h.y, h.size);
+      });
+      ctx.globalAlpha = 1;
+
+      // If met/kissing, draw a big heart above them
+      if (Meeting.met) {
+        const centerX = (g.x + g.width / 2 + m.x + m.width / 2) / 2;
+        const heartSize = Math.min(Meeting.kissTimer * 0.15, 20);
+        const pulse = 1 + Math.sin(Date.now() / 200) * 0.1;
+        ctx.save();
+        ctx.translate(centerX, g.y - 20);
+        ctx.scale(pulse, pulse);
+        ctx.translate(-centerX, -(g.y - 20));
+        ctx.fillStyle = '#FF1744';
+        drawHeart(centerX, g.y - 25, heartSize);
+        ctx.restore();
+      }
+    }
+
+    // Shared background drawing for meeting level
+    function drawValentineBg() {
+      if (finalValentineBgImg.complete && finalValentineBgImg.naturalWidth > 0) {
+        const imgRatio = finalValentineBgImg.naturalWidth / finalValentineBgImg.naturalHeight;
+        const canvasRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+        let drawW, drawH, drawX, drawY;
+        if (canvasRatio > imgRatio) {
+          drawW = CANVAS_WIDTH;
+          drawH = CANVAS_WIDTH / imgRatio;
+          drawX = 0;
+          drawY = (CANVAS_HEIGHT - drawH) / 2;
+        } else {
+          drawH = CANVAS_HEIGHT;
+          drawW = CANVAS_HEIGHT * imgRatio;
+          drawX = (CANVAS_WIDTH - drawW) / 2;
+          drawY = 0;
+        }
+        ctx.drawImage(finalValentineBgImg, drawX, drawY, drawW, drawH);
+        // Slight dark overlay for readability
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        grad.addColorStop(0, '#1a0a2e');
+        grad.addColorStop(0.5, '#4a1042');
+        grad.addColorStop(1, '#2d1b4e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+    }
+
+    // ============================================
+    // HAPPY VALENTINE FINALE (on canvas)
+    // ============================================
+    function initRosePetals() {
+      Meeting.rosePetals = [];
+      for (let i = 0; i < 80; i++) {
+        Meeting.rosePetals.push({
+          x: Math.random() * CANVAS_WIDTH,
+          y: Math.random() * -CANVAS_HEIGHT - 20,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: 1 + Math.random() * 2,
+          size: 4 + Math.random() * 8,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 3,
+          swayPhase: Math.random() * Math.PI * 2,
+          swaySpeed: 0.01 + Math.random() * 0.02,
+          color: ['#FF6B9D', '#FF1744', '#E91E63', '#F48FB1', '#FF4081', '#D81B60'][Math.floor(Math.random() * 6)]
+        });
+      }
+    }
+
+    function updateHappyValentine() {
+      Meeting.valentineTimer++;
+
+      // Fade in text
+      if (Meeting.textAlpha < 1) {
+        Meeting.textAlpha += 0.008;
+        if (Meeting.textAlpha > 1) Meeting.textAlpha = 1;
+      }
+
+      // Update rose petals
+      Meeting.rosePetals.forEach(p => {
+        p.x += p.vx + Math.sin(Date.now() * p.swaySpeed + p.swayPhase) * 0.5;
+        p.y += p.vy;
+        p.rotation += p.rotationSpeed;
+        // Reset when off screen
+        if (p.y > CANVAS_HEIGHT + 20) {
+          p.y = -20;
+          p.x = Math.random() * CANVAS_WIDTH;
+        }
+      });
+    }
+
+    function drawRosePetal(x, y, size, rotation, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation * Math.PI / 180);
+
+      // Petal shape - teardrop/oval
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 0.4, size * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lighter center vein
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 0.1, size * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
     function showItsADate() {
       // Hide teddy victory screen
       document.getElementById('teddy-victory-screen').style.display = 'none';
@@ -4001,6 +4497,7 @@
         '<span style="color: #FFD700; font-size: 24px;">See you on Feb 14</span>';
       document.getElementById('eat-choco-btn').style.display = 'none';
       document.getElementById('continue-to-teddy-btn').style.display = 'none';
+      document.getElementById('continue-to-meeting-btn').style.display = 'none';
       
       // Switch to the date photo (light pixelation)
       const photoContainer = document.getElementById('valentine-photo');
@@ -4021,6 +4518,29 @@
       
       Game.state = 'victory';
       startConfetti();
+
+      // Show "Continue..." button after 3 seconds to proceed to meeting level
+      setTimeout(() => {
+        const btn = document.getElementById('continue-to-meeting-btn');
+        if (btn) btn.style.display = 'inline-block';
+      }, 3000);
+    }
+
+    function continueToMeeting() {
+      // Hide victory screen
+      document.getElementById('victory-screen').style.display = 'none';
+      document.getElementById('continue-to-meeting-btn').style.display = 'none';
+
+      // Show game UI
+      document.getElementById('level-indicator').style.display = 'block';
+
+      // Clear confetti
+      confettiPieces = [];
+      confettiCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Load the meeting level (index 4)
+      Game.state = 'playing';
+      loadLevel(4);
     }
 
     // ============================================
@@ -4048,6 +4568,31 @@
         // Promise mode: block input during popup
         if (PromiseBridge.active && PromiseBridge.choosingPromise) {
           e.preventDefault();
+          return;
+        }
+
+        // Meeting mode: split controls - WASD for girl, Arrow keys for man
+        if (Meeting.active && !Meeting.met) {
+          switch(e.code) {
+            // Girl - WASD
+            case 'KeyA':
+              Meeting.keys1.left = true;
+              e.preventDefault();
+              break;
+            case 'KeyD':
+              Meeting.keys1.right = true;
+              e.preventDefault();
+              break;
+            // Man - Arrow keys
+            case 'ArrowLeft':
+              Meeting.keys2.left = true;
+              e.preventDefault();
+              break;
+            case 'ArrowRight':
+              Meeting.keys2.right = true;
+              e.preventDefault();
+              break;
+          }
           return;
         }
 
@@ -4090,6 +4635,25 @@
     });
 
     document.addEventListener('keyup', (e) => {
+      // Meeting mode: split key release
+      if (Meeting.active) {
+        switch(e.code) {
+          case 'KeyA':
+            Meeting.keys1.left = false;
+            break;
+          case 'KeyD':
+            Meeting.keys1.right = false;
+            break;
+          case 'ArrowLeft':
+            Meeting.keys2.left = false;
+            break;
+          case 'ArrowRight':
+            Meeting.keys2.right = false;
+            break;
+        }
+        return;
+      }
+
       switch(e.code) {
         case 'ArrowLeft':
         case 'KeyA':
@@ -4131,6 +4695,10 @@
       continuePromiseLevel();
     });
 
+    document.getElementById('continue-to-meeting-btn').addEventListener('click', () => {
+      continueToMeeting();
+    });
+
     // ============================================
     // MAIN GAME LOOP
     // ============================================
@@ -4147,6 +4715,8 @@
           updateTeddy();
         } else if (PromiseBridge.active) {
           updatePromise();
+        } else if (Meeting.active) {
+          updateMeeting();
         } else {
           updatePlayer();
           checkCollisions();
@@ -4164,6 +4734,8 @@
           drawTeddy();
         } else if (PromiseBridge.active) {
           drawPromise();
+        } else if (Meeting.active) {
+          drawMeeting();
         } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isRunner) {
           // Story screen for runner level - show garden bg
           if (gardenBgImg.complete && gardenBgImg.naturalWidth > 0) {
@@ -4199,6 +4771,9 @@
           promGrad.addColorStop(1, '#2d1b4e');
           ctx.fillStyle = promGrad;
           ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        } else if (levels[Game.currentLevel] && levels[Game.currentLevel].isMeeting) {
+          // Story screen for meeting level - use final valentine bg
+          drawValentineBg();
         } else {
           drawBackground(Game.currentLevel);
           drawPlatforms();
