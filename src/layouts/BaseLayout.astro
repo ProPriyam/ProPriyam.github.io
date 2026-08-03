@@ -47,24 +47,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
       }
-
-      // Secret Code Easter Egg - type "Aastha" (case insensitive)
-      const secretCode = ['a', 'a', 's', 't', 'h', 'a'];
-      let secretIndex = 0;
-
-      document.addEventListener('keydown', (e) => {
-        const key = e.key.toLowerCase();
-        if (key === secretCode[secretIndex]) {
-          secretIndex++;
-          if (secretIndex === secretCode.length) {
-            window.location.href = '/will-you-be-my-valentine';
-          }
-        } else if (key === secretCode[0]) {
-          secretIndex = 1;
-        } else {
-          secretIndex = 0;
-        }
-      });
     </script>
   </head>
   <body>
